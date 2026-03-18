@@ -43,6 +43,26 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          node -e "
+            const fs = require('fs');
+            const ver = process.argv[1];
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = ver;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = ver;
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+            let cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+            cargo = cargo.replace(/^version = \".*\"/m, 'version = \"' + ver + '\"');
+            fs.writeFileSync('src-tauri/Cargo.toml', cargo);
+            console.log('Version synced to ' + ver);
+          " "$VERSION"
+
       - name: Install frontend dependencies
         run: npm ci
 
@@ -57,7 +77,7 @@ jobs:
             🛰️ Satellite 新版本发布！
 
             **安装包：**
-            - Windows: `.msi` 或 `.exe`
+            - Windows: `.exe` 安装包
             - macOS (Apple Silicon): `aarch64.dmg`
             - macOS (Intel): `x86_64.dmg`
           releaseDraft: false

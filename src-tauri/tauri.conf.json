@@ -1,6 +1,6 @@
 {
   "productName": "Satellite",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "identifier": "com.satellite.imgbed",
   "build": {
     "frontendDist": "../dist",
@@ -41,13 +41,12 @@
         "dragDropEnabled": true
       }
     ],
-    "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src ipc: http://ipc.localhost"
-    }
+    "security": {}
+
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "dmg"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
