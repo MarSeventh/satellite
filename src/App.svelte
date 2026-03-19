@@ -19,6 +19,8 @@
     if (isFloating) {
       document.documentElement.style.background = "transparent";
       document.body.style.background = "transparent";
+      const appDiv = document.getElementById("app");
+      if (appDiv) appDiv.style.background = "transparent";
     } else {
       document.documentElement.style.background = "#1a1b23";
       document.body.style.background = "#1a1b23";

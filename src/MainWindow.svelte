@@ -1,15 +1,19 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
-  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { open as shellOpen } from "@tauri-apps/plugin-shell";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import { listen } from "@tauri-apps/api/event";
   import { onMount, onDestroy } from "svelte";
   import HistoryList from "./HistoryList.svelte";
   import Settings from "./Settings.svelte";
+  import RemoteFiles from "./RemoteFiles.svelte";
+  import Toast from "./Toast.svelte";
+  import { addToast } from "./toastStore.js";
+  import { formatUrl } from "./formatUrl.js";
 
-  let activeTab = "history"; // "history" | "settings"
-  let config = { base_url: "", auth_token: "" };
+  let activeTab = "history"; // "history" | "settings" | "remote"
+  let config = { base_url: "", auth_token: "", upload_folder: "", auto_copy_format: "raw", show_floating: true };
   let isUploading = false;
   let uploadStatus = "";
   let dragOver = false;
@@ -24,12 +28,24 @@
       uploadStatus = `上传中 ${p.current}/${p.total}：${p.filename}`;
     }));
 
-    unlistens.push(await listen("upload-complete", (e) => {
+    unlistens.push(await listen("upload-complete", async (e) => {
       isUploading = false;
       uploadStatus = `✅ 已上传 ${e.payload.length} 个文件`;
       setTimeout(() => { uploadStatus = ""; }, 3000);
       // refresh history
       historyKey++;
+
+      // Auto-copy uploaded URLs
+      if (config.auto_copy_format && e.payload.length > 0) {
+        try {
+          const fmt = config.auto_copy_format;
+          const text = e.payload
+            .map((r) => formatUrl(r.url, r.filename, fmt))
+            .join("\n");
+          await writeText(text);
+          addToast(`已自动复制 ${e.payload.length} 个链接`);
+        } catch (_) {}
+      }
     }));
 
     unlistens.push(await listen("tauri://drag-drop", async (e) => {
@@ -73,7 +89,7 @@
 
   async function openAdmin() {
     if (config.base_url) {
-      await openUrl(config.base_url);
+      await shellOpen(config.base_url);
     }
   }
 
@@ -83,6 +99,8 @@
 </script>
 
 <div class="main-wrap" class:drag-active={dragOver}>
+  <Toast />
+
   <!-- Header -->
   <header class="header">
     <div class="header-left">
@@ -128,6 +146,13 @@
     </button>
     <button
       class="tab-btn"
+      class:active={activeTab === "remote"}
+      on:click={() => activeTab = "remote"}
+    >
+      ☁️ 远程文件
+    </button>
+    <button
+      class="tab-btn"
       class:active={activeTab === "settings"}
       on:click={() => activeTab = "settings"}
     >
@@ -141,6 +166,8 @@
       {#key historyKey}
         <HistoryList />
       {/key}
+    {:else if activeTab === "remote"}
+      <RemoteFiles />
     {:else}
       <Settings {config} on:saved={(e) => onConfigSaved(e.detail)} />
     {/if}

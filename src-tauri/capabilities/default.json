@@ -15,6 +15,7 @@
     "core:window:allow-set-focus",
     "core:window:allow-is-visible",
     "core:event:allow-listen",
-    "core:event:allow-emit"
+    "core:event:allow-emit",
+    "core:window:allow-start-dragging"
   ]
 }

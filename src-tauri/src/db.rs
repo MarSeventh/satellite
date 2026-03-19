@@ -83,6 +83,12 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         conn.query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
     }
+
+    pub fn delete(&self, id: i64) -> Result<bool, rusqlite::Error> {
+        let conn = self.conn.lock().unwrap();
+        let affected = conn.execute("DELETE FROM history WHERE id = ?1", params![id])?;
+        Ok(affected > 0)
+    }
 }
 
 #[tauri::command]
@@ -97,4 +103,9 @@ pub fn get_history(
 #[tauri::command]
 pub fn get_history_count(db: tauri::State<'_, Database>) -> Result<u32, String> {
     db.count().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_history(db: tauri::State<'_, Database>, id: i64) -> Result<bool, String> {
+    db.delete(id).map_err(|e| e.to_string())
 }

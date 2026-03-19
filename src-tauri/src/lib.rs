@@ -1,5 +1,6 @@
 mod config;
 mod db;
+mod remote;
 mod upload;
 
 use tauri::{
@@ -35,6 +36,17 @@ fn hide_main_window(app: tauri::AppHandle) {
     }
 }
 
+#[tauri::command]
+fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
+    if let Some(win) = app.get_webview_window("floating") {
+        if visible {
+            let _ = win.show();
+        } else {
+            let _ = win.hide();
+        }
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -46,6 +58,15 @@ pub fn run() {
             let database =
                 db::Database::new().expect("Failed to initialize database");
             app.manage(database);
+
+            // Check config for floating window visibility
+            let cfg = config::load_config();
+            if !cfg.show_floating {
+                // Floating window starts hidden (visible: false in config),
+                // FloatingBall.svelte calls appWindow.show() on mount,
+                // but we suppress that by keeping it hidden via config.
+                // We'll handle this by emitting a config event.
+            }
 
             // ----- System tray -----
             let show_item =
@@ -101,11 +122,15 @@ pub fn run() {
             upload::upload_files,
             db::get_history,
             db::get_history_count,
+            db::delete_history,
             config::get_config,
             config::save_config,
             toggle_main_window,
             show_main_window,
             hide_main_window,
+            set_floating_visible,
+            remote::list_remote_files,
+            remote::delete_remote_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

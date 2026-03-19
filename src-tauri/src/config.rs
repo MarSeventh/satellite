@@ -3,9 +3,13 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct AppConfig {
     pub base_url: String,
     pub auth_token: String,
+    pub upload_folder: String,
+    pub auto_copy_format: String,
+    pub show_floating: bool,
 }
 
 impl Default for AppConfig {
@@ -13,6 +17,9 @@ impl Default for AppConfig {
         Self {
             base_url: String::new(),
             auth_token: String::new(),
+            upload_folder: String::new(),
+            auto_copy_format: "raw".to_string(),
+            show_floating: true,
         }
     }
 }
@@ -45,10 +52,19 @@ pub fn get_config() -> AppConfig {
 }
 
 #[tauri::command]
-pub fn save_config(base_url: String, auth_token: String) -> Result<(), String> {
+pub fn save_config(
+    base_url: String,
+    auth_token: String,
+    upload_folder: String,
+    auto_copy_format: String,
+    show_floating: bool,
+) -> Result<(), String> {
     let config = AppConfig {
         base_url,
         auth_token,
+        upload_folder,
+        auto_copy_format,
+        show_floating,
     };
     store_config(&config)
 }

@@ -18,6 +18,12 @@
   const appWindow = getCurrentWindow();
 
   onMount(async () => {
+    // Check config to see if floating ball should be shown
+    try {
+      const cfg = await invoke("get_config");
+      if (cfg.show_floating === false) return;
+    } catch (_) {}
+
     // Show the floating window after Svelte has mounted and set transparent background
     appWindow.show();
 
@@ -71,6 +77,41 @@
     await invoke("toggle_main_window");
   }
 
+  // --- Drag vs Click detection ---
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let isDragging = false;
+
+  function onMouseDown(e) {
+    if (e.button !== 0) return;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    isDragging = false;
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }
+
+  async function onMouseMove(e) {
+    if (isDragging) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      isDragging = true;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      await appWindow.startDragging();
+    }
+  }
+
+  function onMouseUp() {
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+    if (!isDragging) {
+      handleClick();
+    }
+    isDragging = false;
+  }
+
   // Circumference of the progress ring
   const RADIUS = 28;
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -81,7 +122,7 @@
 <div
   class="floating-root"
   class:drag-over={isDragOver}
-  on:click={handleClick}
+  on:mousedown={onMouseDown}
   role="button"
   tabindex="0"
   on:keydown={(e) => e.key === "Enter" && handleClick()}

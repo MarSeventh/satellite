@@ -95,6 +95,9 @@ pub async fn upload_files(
         if !cfg.auth_token.is_empty() {
             req = req.header("Authorization", format!("Bearer {}", cfg.auth_token));
         }
+        if !cfg.upload_folder.is_empty() {
+            req = req.query(&[("uploadFolder", &cfg.upload_folder)]);
+        }
 
         let resp = req
             .send()
