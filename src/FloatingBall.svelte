@@ -195,9 +195,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: rgba(30, 30, 40, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgb(30, 30, 40);
     border: 1.5px solid rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
