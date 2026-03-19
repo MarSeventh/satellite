@@ -1,8 +1,8 @@
 use crate::config;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ListResponse {
+#[derive(Deserialize, Debug)]
+struct ApiListResponse {
     #[serde(default)]
     pub files: Vec<serde_json::Value>,
     #[serde(default)]
@@ -10,6 +10,14 @@ pub struct ListResponse {
     #[serde(rename = "totalCount", default)]
     pub total_count: u32,
     #[serde(rename = "returnedCount", default)]
+    pub returned_count: u32,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ListResponse {
+    pub files: Vec<serde_json::Value>,
+    pub directories: Vec<String>,
+    pub total_count: u32,
     pub returned_count: u32,
 }
 
@@ -56,9 +64,16 @@ pub async fn list_remote_files(
         return Err(format!("列表请求失败 ({}): {}", status, body));
     }
 
-    resp.json::<ListResponse>()
+    let api_resp = resp.json::<ApiListResponse>()
         .await
-        .map_err(|e| format!("解析响应失败: {}", e))
+        .map_err(|e| format!("解析响应失败: {}", e))?;
+
+    Ok(ListResponse {
+        files: api_resp.files,
+        directories: api_resp.directories,
+        total_count: api_resp.total_count,
+        returned_count: api_resp.returned_count,
+    })
 }
 
 #[tauri::command]

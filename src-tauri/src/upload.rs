@@ -3,7 +3,10 @@ use crate::db::Database;
 use reqwest::multipart;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, State};
+
+static UPLOADING: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize, Clone)]
 pub struct UploadProgress {
@@ -53,6 +56,23 @@ pub async fn upload_files(
     if cfg.base_url.is_empty() {
         return Err("API Endpoint not configured".into());
     }
+
+    // Prevent concurrent uploads (e.g. both windows receiving drag-drop)
+    if UPLOADING.swap(true, Ordering::SeqCst) {
+        return Ok(vec![]);
+    }
+
+    let result = do_upload(app, db, file_paths, cfg).await;
+    UPLOADING.store(false, Ordering::SeqCst);
+    result
+}
+
+async fn do_upload(
+    app: AppHandle,
+    db: State<'_, Database>,
+    file_paths: Vec<String>,
+    cfg: config::AppConfig,
+) -> Result<Vec<UploadResult>, String> {
 
     let client = reqwest::Client::new();
     let total = file_paths.len();

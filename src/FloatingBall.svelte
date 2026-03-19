@@ -106,7 +106,8 @@
   function onMouseUp() {
     window.removeEventListener("mousemove", onMouseMove);
     window.removeEventListener("mouseup", onMouseUp);
-    if (!isDragging) {
+    // Don't trigger click if we were dragging, or if a file drag-over/upload is active
+    if (!isDragging && !isDragOver && !isUploading) {
       handleClick();
     }
     isDragging = false;

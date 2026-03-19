@@ -35,6 +35,7 @@
         "decorations": false,
         "alwaysOnTop": true,
         "transparent": true,
+        "shadow": false,
         "resizable": false,
         "skipTaskbar": true,
         "x": 60,
