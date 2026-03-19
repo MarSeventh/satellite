@@ -8,6 +8,7 @@
   let files = [];
   let directories = [];
   let totalCount = 0;
+  let returnedCount = 0;
   let currentDir = "";
   let searchQuery = "";
   let searchInput = "";
@@ -40,6 +41,7 @@
       files = result.files || [];
       directories = result.directories || [];
       totalCount = result.total_count || 0;
+      returnedCount = result.returned_count || files.length;
     } catch (e) {
       error = String(e);
     } finally {
@@ -76,32 +78,43 @@
       return [...acc, { name: part, path }];
     }, []);
 
+  // Use returnedCount to determine if there's a next page when totalCount is 0
+  $: hasNextPage = totalCount > 0 ? (start + count < totalCount) : (returnedCount >= count);
+  $: hasPrevPage = start > 0;
+  $: currentPage = Math.floor(start / count) + 1;
+  $: displayTotal = totalCount > 0 ? totalCount : (start + returnedCount);
+
   function prevPage() {
-    if (start >= count) {
+    if (hasPrevPage) {
       start -= count;
+      if (start < 0) start = 0;
       loadFiles();
     }
   }
 
   function nextPage() {
-    if (start + count < totalCount) {
+    if (hasNextPage) {
       start += count;
       loadFiles();
     }
   }
 
-  $: currentPage = Math.floor(start / count) + 1;
-  $: totalPages = Math.max(1, Math.ceil(totalCount / count));
-
   function getFileUrl(file) {
-    const name = file.name || file.fileName || "";
+    // file.name is the full path like "folder/image.jpg"
+    const name = file.name || "";
     if (name.startsWith("http")) return name;
-    const path = currentDir ? `${currentDir}/${name}` : name;
-    return `${baseUrl}/file/${path}`;
+    return `${baseUrl}/file/${name}`;
   }
 
-  function getFileName(file) {
-    return file.name || file.fileName || "unknown";
+  function getDisplayName(file) {
+    // Extract just the filename from path like "folder/image.jpg" -> "image.jpg"
+    const name = file.name || "unknown";
+    const parts = name.split("/");
+    return parts[parts.length - 1] || name;
+  }
+
+  function getFilePath(file) {
+    return file.name || "";
   }
 
   function isImage(filename) {
@@ -112,7 +125,7 @@
   async function copyFile(file, format) {
     try {
       const url = getFileUrl(file);
-      const name = getFileName(file);
+      const name = getDisplayName(file);
       const text = formatUrl(url, name, format);
       await writeText(text);
       const label = FORMAT_OPTIONS.find((f) => f.value === format)?.label || format;
@@ -123,10 +136,10 @@
   }
 
   async function deleteFile(file) {
-    const name = getFileName(file);
+    const name = getDisplayName(file);
     if (!confirm(`确认删除远程文件 "${name}"？`)) return;
     try {
-      const path = currentDir ? `${currentDir}/${name}` : name;
+      const path = getFilePath(file);
       await invoke("delete_remote_file", { path });
       addToast("已删除远程文件");
       await loadFiles();
@@ -188,14 +201,14 @@
       {#each files as file}
         <div class="file-item">
           <div class="file-left">
-            {#if isImage(getFileName(file))}
+            {#if isImage(getDisplayName(file))}
               <div class="file-thumb img-thumb">
-                <img src={getFileUrl(file)} alt={getFileName(file)} loading="lazy" />
+                <img src={getFileUrl(file)} alt={getDisplayName(file)} loading="lazy" />
               </div>
             {:else}
               <div class="file-thumb">📄</div>
             {/if}
-            <div class="file-name" title={getFileName(file)}>{getFileName(file)}</div>
+            <div class="file-name" title={getDisplayName(file)}>{getDisplayName(file)}</div>
           </div>
           <div class="file-right">
             <button class="btn-sm" on:click={() => copyFile(file, defaultFormat)} title="复制链接">📋</button>
@@ -212,9 +225,9 @@
     </div>
 
     <div class="footer">
-      <button class="page-btn" on:click={prevPage} disabled={start <= 0}>‹ 上一页</button>
-      <span class="page-info">{currentPage}/{totalPages} 页，共 {totalCount} 个文件</span>
-      <button class="page-btn" on:click={nextPage} disabled={start + count >= totalCount}>下一页 ›</button>
+      <button class="page-btn" on:click={prevPage} disabled={!hasPrevPage}>‹ 上一页</button>
+      <span class="page-info">第 {currentPage} 页{#if totalCount > 0}，共 {totalCount} 个文件{/if}</span>
+      <button class="page-btn" on:click={nextPage} disabled={!hasNextPage}>下一页 ›</button>
     </div>
   {/if}
 </div>
