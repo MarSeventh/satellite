@@ -108,25 +108,39 @@ pub async fn delete_remote_file(path: String) -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn download_remote_file(url: String, save_path: String) -> Result<(), String> {
+    let cfg = config::load_config();
     let client = reqwest::Client::new();
-    let resp = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("下载失败: {}", e))?;
+
+    let mut req = client.get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36");
+
+    if !cfg.auth_token.is_empty() {
+        req = req.header("Authorization", format!("Bearer {}", cfg.auth_token));
+    }
+
+    let resp = req.send().await.map_err(|e| format!("下载失败: {}", e))?;
 
     if !resp.status().is_success() {
         return Err(format!("下载失败 ({})", resp.status()));
     }
 
-    let bytes = resp
-        .bytes()
-        .await
-        .map_err(|e| format!("读取数据失败: {}", e))?;
+    let bytes = resp.bytes().await.map_err(|e| format!("读取数据失败: {}", e))?;
+
+    // Verify we got actual file content, not an HTML challenge page
+    if bytes.len() > 15 && bytes.starts_with(b"<!doctype") || bytes.starts_with(b"<!DOCTYPE") || bytes.starts_with(b"<html") {
+        return Err("下载被 Cloudflare 拦截，请尝试在浏览器中下载".into());
+    }
 
     tokio::fs::write(&save_path, &bytes)
         .await
         .map_err(|e| format!("保存文件失败: {}", e))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn save_file_bytes(bytes: Vec<u8>, save_path: String) -> Result<(), String> {
+    tokio::fs::write(&save_path, &bytes)
+        .await
+        .map_err(|e| format!("保存文件失败: {}", e))
 }

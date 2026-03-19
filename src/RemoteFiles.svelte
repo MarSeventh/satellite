@@ -142,7 +142,21 @@
     try {
       const path = await saveDialog({ defaultPath: name });
       if (!path) return;
-      await invoke("download_remote_file", { url, savePath: path });
+
+      // Try backend download first (with auth headers)
+      try {
+        await invoke("download_remote_file", { url, savePath: path });
+        addToast("下载完成");
+        return;
+      } catch (_) {
+        // Backend blocked by Cloudflare, fallback to WebView fetch
+      }
+
+      // Fallback: fetch via WebView (has browser cookies to bypass CF challenge)
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.arrayBuffer();
+      await invoke("save_file_bytes", { bytes: Array.from(new Uint8Array(blob)), savePath: path });
       addToast("下载完成");
     } catch (e) {
       addToast(`下载失败: ${e}`, "error");
