@@ -66,12 +66,12 @@ pub async fn upload_files(
             .to_string_lossy()
             .to_string();
 
-        // Emit start progress
+        // Emit start progress for this file
         let _ = app.emit(
             "upload-progress",
             UploadProgress {
                 filename: filename.clone(),
-                progress: 0.0,
+                progress: idx as f64 / total as f64,
                 current: idx + 1,
                 total,
             },
@@ -80,6 +80,17 @@ pub async fn upload_files(
         let file_bytes = tokio::fs::read(&file_path)
             .await
             .map_err(|e| format!("Failed to read {}: {}", filename, e))?;
+
+        // Emit mid-progress after file read, before upload
+        let _ = app.emit(
+            "upload-progress",
+            UploadProgress {
+                filename: filename.clone(),
+                progress: (idx as f64 + 0.3) / total as f64,
+                current: idx + 1,
+                total,
+            },
+        );
 
         let mime = mime_from_ext(&filename);
         let part = multipart::Part::bytes(file_bytes)
@@ -103,6 +114,17 @@ pub async fn upload_files(
             .send()
             .await
             .map_err(|e| format!("Upload request failed: {}", e))?;
+
+        // Emit progress after server responded
+        let _ = app.emit(
+            "upload-progress",
+            UploadProgress {
+                filename: filename.clone(),
+                progress: (idx as f64 + 0.8) / total as f64,
+                current: idx + 1,
+                total,
+            },
+        );
 
         if !resp.status().is_success() {
             let status = resp.status();
@@ -138,12 +160,12 @@ pub async fn upload_files(
         };
         results.push(result);
 
-        // Emit completion progress
+        // Emit completion progress for this file
         let _ = app.emit(
             "upload-progress",
             UploadProgress {
                 filename,
-                progress: 1.0,
+                progress: (idx + 1) as f64 / total as f64,
                 current: idx + 1,
                 total,
             },
