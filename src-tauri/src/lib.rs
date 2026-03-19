@@ -116,6 +116,39 @@ pub fn run() {
                 });
             }
 
+            // Force transparent background on macOS floating window
+            #[cfg(target_os = "macos")]
+            {
+                if let Some(win) = app.get_webview_window("floating") {
+                    unsafe {
+                        // Set NSWindow background to clearColor
+                        if let Ok(ns_win) = win.ns_window() {
+                            let ns_win = ns_win as *mut objc::runtime::Object;
+                            let clear: *mut objc::runtime::Object =
+                                objc::msg_send![objc::class!(NSColor), clearColor];
+                            let _: () =
+                                objc::msg_send![ns_win, setBackgroundColor: clear];
+                        }
+                    }
+                    // Set WKWebView drawsBackground to NO
+                    let _ = win.with_webview(|webview| unsafe {
+                        let no: i8 = 0;
+                        let key = std::ffi::CString::new("drawsBackground").unwrap();
+                        let ns_key: *mut objc::runtime::Object = objc::msg_send![
+                            objc::class!(NSString),
+                            stringWithUTF8String: key.as_ptr()
+                        ];
+                        let ns_no: *mut objc::runtime::Object =
+                            objc::msg_send![objc::class!(NSNumber), numberWithBool: no];
+                        let _: () = objc::msg_send![
+                            webview.inner(),
+                            setValue: ns_no
+                            forKey: ns_key
+                        ];
+                    });
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
