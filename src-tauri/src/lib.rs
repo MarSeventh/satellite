@@ -118,6 +118,7 @@ pub fn run() {
 
             // Force transparent background on macOS floating window
             #[cfg(target_os = "macos")]
+            #[allow(unexpected_cfgs)]
             {
                 use objc::{class, msg_send, sel, sel_impl};
 
@@ -130,16 +131,19 @@ pub fn run() {
                             let _: () = msg_send![ns_win, setBackgroundColor: clear];
                         }
                     }
-                    let _ = win.with_webview(|webview| unsafe {
-                        use objc::{class, msg_send, sel, sel_impl};
-                        let wv = webview.inner() as *mut objc::runtime::Object;
-                        let no: objc::runtime::BOOL = 0;
-                        let ns_no: *mut objc::runtime::Object =
-                            msg_send![class!(NSNumber), numberWithBool: no];
-                        let ns_key: *mut objc::runtime::Object =
-                            msg_send![class!(NSString), stringWithUTF8String:
-                                b"drawsBackground\0".as_ptr()];
-                        let _: () = msg_send![wv, setValue: ns_no forKey: ns_key];
+                    let _ = win.with_webview(|webview| {
+                        #[allow(unexpected_cfgs)]
+                        unsafe {
+                            use objc::{class, msg_send, sel, sel_impl};
+                            let wv = webview.inner() as *mut objc::runtime::Object;
+                            let no: objc::runtime::BOOL = false;
+                            let ns_no: *mut objc::runtime::Object =
+                                msg_send![class!(NSNumber), numberWithBool: no];
+                            let ns_key: *mut objc::runtime::Object =
+                                msg_send![class!(NSString), stringWithUTF8String:
+                                    b"drawsBackground\0".as_ptr()];
+                            let _: () = msg_send![wv, setValue: ns_no forKey: ns_key];
+                        }
                     });
                 }
             }
