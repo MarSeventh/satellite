@@ -179,6 +179,7 @@
     margin: 0;
     overflow: hidden;
     color: #e2e8f0;
+    color-scheme: dark;
     font-family: Inter, system-ui, sans-serif;
   }
 

@@ -18,9 +18,13 @@
     // overriding the main window's opaque background.
     if (isFloating) {
       document.documentElement.style.background = "transparent";
+      document.documentElement.style.colorScheme = "normal";
       document.body.style.background = "transparent";
       const appDiv = document.getElementById("app");
       if (appDiv) appDiv.style.background = "transparent";
+      // Override any Tailwind/reset backgrounds
+      document.documentElement.style.setProperty("background-color", "transparent", "important");
+      document.body.style.setProperty("background-color", "transparent", "important");
     } else {
       document.documentElement.style.background = "#1a1b23";
       document.body.style.background = "#1a1b23";
