@@ -131,6 +131,7 @@ pub fn run() {
             set_floating_visible,
             remote::list_remote_files,
             remote::delete_remote_file,
+            remote::download_remote_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

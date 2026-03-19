@@ -1,6 +1,7 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { save as saveDialog } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import { addToast } from "./toastStore.js";
   import { formatUrl, FORMAT_OPTIONS } from "./formatUrl.js";
@@ -39,7 +40,8 @@
         search: searchQuery,
       });
       files = result.files || [];
-      directories = result.directories || [];
+      // Only show directories on the first page
+      directories = start === 0 ? (result.directories || []) : [];
       totalCount = result.total_count || 0;
       returnedCount = result.returned_count || files.length;
     } catch (e) {
@@ -50,6 +52,8 @@
   }
 
   function navigateToDir(dir) {
+    // API returns absolute directory paths (without leading /),
+    // use them directly as the dir parameter
     currentDir = dir;
     start = 0;
     searchQuery = "";
@@ -78,16 +82,14 @@
       return [...acc, { name: part, path }];
     }, []);
 
-  // Use returnedCount to determine if there's a next page when totalCount is 0
   $: hasNextPage = totalCount > 0 ? (start + count < totalCount) : (returnedCount >= count);
   $: hasPrevPage = start > 0;
   $: currentPage = Math.floor(start / count) + 1;
-  $: displayTotal = totalCount > 0 ? totalCount : (start + returnedCount);
+  $: totalPages = totalCount > 0 ? Math.ceil(totalCount / count) : currentPage + (hasNextPage ? 1 : 0);
 
   function prevPage() {
     if (hasPrevPage) {
-      start -= count;
-      if (start < 0) start = 0;
+      start = Math.max(0, start - count);
       loadFiles();
     }
   }
@@ -100,14 +102,13 @@
   }
 
   function getFileUrl(file) {
-    // file.name is the full path like "folder/image.jpg"
+    // file.name is the full path from API, e.g. "folder/image.jpg"
     const name = file.name || "";
     if (name.startsWith("http")) return name;
     return `${baseUrl}/file/${name}`;
   }
 
   function getDisplayName(file) {
-    // Extract just the filename from path like "folder/image.jpg" -> "image.jpg"
     const name = file.name || "unknown";
     const parts = name.split("/");
     return parts[parts.length - 1] || name;
@@ -135,12 +136,24 @@
     }
   }
 
+  async function downloadFile(file) {
+    const name = getDisplayName(file);
+    const url = getFileUrl(file);
+    try {
+      const path = await saveDialog({ defaultPath: name });
+      if (!path) return;
+      await invoke("download_remote_file", { url, savePath: path });
+      addToast("下载完成");
+    } catch (e) {
+      addToast(`下载失败: ${e}`, "error");
+    }
+  }
+
   async function deleteFile(file) {
     const name = getDisplayName(file);
     if (!confirm(`确认删除远程文件 "${name}"？`)) return;
     try {
-      const path = getFilePath(file);
-      await invoke("delete_remote_file", { path });
+      await invoke("delete_remote_file", { path: getFilePath(file) });
       addToast("已删除远程文件");
       await loadFiles();
     } catch (e) {
@@ -187,12 +200,12 @@
     </div>
   {:else}
     <div class="file-list">
-      <!-- Directories -->
+      <!-- Directories (only on first page) -->
       {#each directories as dir}
-        <button class="file-item dir-item" on:click={() => navigateToDir(currentDir ? `${currentDir}/${dir}` : dir)}>
+        <button class="file-item dir-item" on:click={() => navigateToDir(dir)}>
           <div class="file-left">
             <div class="file-thumb">📁</div>
-            <div class="file-name">{dir}</div>
+            <div class="file-name">{dir.split("/").pop() || dir}</div>
           </div>
         </button>
       {/each}
@@ -212,6 +225,7 @@
           </div>
           <div class="file-right">
             <button class="btn-sm" on:click={() => copyFile(file, defaultFormat)} title="复制链接">📋</button>
+            <button class="btn-sm" on:click={() => downloadFile(file)} title="下载">⬇️</button>
             <button class="btn-sm btn-del" on:click={() => deleteFile(file)} title="删除">🗑️</button>
           </div>
         </div>
@@ -226,7 +240,7 @@
 
     <div class="footer">
       <button class="page-btn" on:click={prevPage} disabled={!hasPrevPage}>‹ 上一页</button>
-      <span class="page-info">第 {currentPage} 页{#if totalCount > 0}，共 {totalCount} 个文件{/if}</span>
+      <span class="page-info">{currentPage}/{totalPages} 页，共 {totalCount} 个文件</span>
       <button class="page-btn" on:click={nextPage} disabled={!hasNextPage}>下一页 ›</button>
     </div>
   {/if}

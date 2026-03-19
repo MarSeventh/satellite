@@ -105,3 +105,28 @@ pub async fn delete_remote_file(path: String) -> Result<bool, String> {
 
     Ok(true)
 }
+
+#[tauri::command]
+pub async fn download_remote_file(url: String, save_path: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("下载失败: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("下载失败 ({})", resp.status()));
+    }
+
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("读取数据失败: {}", e))?;
+
+    tokio::fs::write(&save_path, &bytes)
+        .await
+        .map_err(|e| format!("保存文件失败: {}", e))?;
+
+    Ok(())
+}
