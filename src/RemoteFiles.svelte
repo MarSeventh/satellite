@@ -1,7 +1,7 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-  import { save as saveDialog } from "@tauri-apps/plugin-dialog";
+  import { open as shellOpen } from "@tauri-apps/plugin-shell";
   import { onMount } from "svelte";
   import { addToast } from "./toastStore.js";
   import { formatUrl, FORMAT_OPTIONS } from "./formatUrl.js";
@@ -102,10 +102,10 @@
   }
 
   function getFileUrl(file) {
-    // file.name is the full path from API, e.g. "folder/image.jpg"
     const name = file.name || "";
     if (name.startsWith("http")) return name;
-    return `${baseUrl}/file/${name}`;
+    const base = baseUrl.replace(/\/+$/, "");
+    return `${base}/file/${name}`;
   }
 
   function getDisplayName(file) {
@@ -137,29 +137,12 @@
   }
 
   async function downloadFile(file) {
-    const name = getDisplayName(file);
     const url = getFileUrl(file);
     try {
-      const path = await saveDialog({ defaultPath: name });
-      if (!path) return;
-
-      // Try backend download first (with auth headers)
-      try {
-        await invoke("download_remote_file", { url, savePath: path });
-        addToast("下载完成");
-        return;
-      } catch (_) {
-        // Backend blocked by Cloudflare, fallback to WebView fetch
-      }
-
-      // Fallback: fetch via WebView (has browser cookies to bypass CF challenge)
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.arrayBuffer();
-      await invoke("save_file_bytes", { bytes: Array.from(new Uint8Array(blob)), savePath: path });
-      addToast("下载完成");
+      await shellOpen(url);
+      addToast("已在浏览器中打开");
     } catch (e) {
-      addToast(`下载失败: ${e}`, "error");
+      addToast(`打开失败: ${e}`, "error");
     }
   }
 
