@@ -13,6 +13,17 @@
   let unlisten = null;
 
   onMount(async () => {
+    // Set background based on window type — both windows share the same CSS bundle,
+    // so we must set this via JS to avoid the floating window's transparent background
+    // overriding the main window's opaque background.
+    if (isFloating) {
+      document.documentElement.style.background = "transparent";
+      document.body.style.background = "transparent";
+    } else {
+      document.documentElement.style.background = "#1a1b23";
+      document.body.style.background = "#1a1b23";
+    }
+
     unlisten = await listen("upload-progress", (event) => {
       uploadProgress = event.payload;
     });

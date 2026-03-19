@@ -150,7 +150,6 @@
 <style>
   :global(body) {
     margin: 0;
-    background: #1a1b23;
     overflow: hidden;
     color: #e2e8f0;
     font-family: Inter, system-ui, sans-serif;
