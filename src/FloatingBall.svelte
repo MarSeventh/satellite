@@ -18,6 +18,9 @@
   const appWindow = getCurrentWindow();
 
   onMount(async () => {
+    // Show the floating window after Svelte has mounted and set transparent background
+    appWindow.show();
+
     // Listen for file drag-drop events from Tauri
     unlistenDrop = await listen("tauri://drag-drop", async (event) => {
       isDragOver = false;
@@ -119,9 +122,11 @@
 </div>
 
 <style>
+  :global(html),
   :global(body) {
     margin: 0;
-    background: transparent;
+    padding: 0;
+    background: transparent !important;
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
