@@ -1,3 +1,5 @@
+#![cfg_attr(target_os = "macos", allow(unexpected_cfgs))]
+
 mod config;
 mod db;
 mod remote;
@@ -136,7 +138,7 @@ pub fn run() {
                         unsafe {
                             use objc::{class, msg_send, sel, sel_impl};
                             let wv = webview.inner() as *mut objc::runtime::Object;
-                            let no: objc::runtime::BOOL = false;
+                            let no = objc::runtime::NO;
                             let ns_no: *mut objc::runtime::Object =
                                 msg_send![class!(NSNumber), numberWithBool: no];
                             let ns_key: *mut objc::runtime::Object =
