@@ -1,7 +1,7 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-  import { open as shellOpen } from "@tauri-apps/plugin-shell";
+  import { save as saveDialog } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import { addToast } from "./toastStore.js";
   import { formatUrl, FORMAT_OPTIONS } from "./formatUrl.js";
@@ -137,12 +137,15 @@
   }
 
   async function downloadFile(file) {
+    const name = getDisplayName(file);
     const url = getFileUrl(file);
     try {
-      await shellOpen(url);
-      addToast("已在浏览器中打开");
+      const path = await saveDialog({ defaultPath: name });
+      if (!path) return;
+      await invoke("download_remote_file", { url, savePath: path });
+      addToast("下载完成");
     } catch (e) {
-      addToast(`打开失败: ${e}`, "error");
+      addToast(`下载失败: ${e}`, "error");
     }
   }
 

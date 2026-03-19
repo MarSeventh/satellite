@@ -132,7 +132,6 @@ pub fn run() {
             remote::list_remote_files,
             remote::delete_remote_file,
             remote::download_remote_file,
-            remote::save_file_bytes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
