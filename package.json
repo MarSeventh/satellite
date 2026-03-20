@@ -1,12 +1,17 @@
 {
   "name": "satellite",
   "private": true,
-  "version": "0.1.5",
+  "version": "0.1.23",
   "type": "module",
   "scripts": {
+    "version:sync": "node scripts/sync-version.mjs",
+    "predev": "npm run version:sync",
     "dev": "vite",
+    "prebuild": "npm run version:sync",
     "build": "vite build",
+    "prepreview": "npm run version:sync",
     "preview": "vite preview",
+    "pretauri": "npm run version:sync",
     "tauri": "tauri"
   },
   "dependencies": {

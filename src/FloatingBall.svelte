@@ -1,12 +1,8 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { open } from "@tauri-apps/plugin-dialog";
-  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
   import { listen } from "@tauri-apps/api/event";
   import { onMount, onDestroy } from "svelte";
-
-  export let uploadProgress = null;
 
   let isDragOver = false;
   let isUploading = false;
@@ -84,6 +80,7 @@
 
   function onMouseDown(e) {
     if (e.button !== 0) return;
+    e.preventDefault();
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     isDragging = false;
@@ -167,12 +164,21 @@
   .floating-root {
     position: fixed;
     inset: 0;
-    width: 72px;
-    height: 72px;
+    width: 100vw;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    background: transparent;
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .floating-root:focus,
+  .floating-root:focus-visible {
+    outline: none;
   }
 
   .ring {
@@ -195,34 +201,60 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: rgb(30, 30, 40);
+    background:
+      radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 30%),
+      linear-gradient(145deg, rgb(45, 47, 60) 0%, rgb(28, 30, 41) 58%, rgb(17, 19, 26) 100%);
     border: 1.5px solid rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.4),
-      0 1px 4px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+      inset 0 1px 1px rgba(255, 255, 255, 0.12),
+      inset 0 -10px 18px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
     animation: breathe 3s ease-in-out infinite;
     position: relative;
     z-index: 1;
+    overflow: hidden;
+    will-change: transform;
+  }
+
+  .ball::before,
+  .ball::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .ball::before {
+    inset: 4px;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 36%);
+    opacity: 0.9;
+  }
+
+  .ball::after {
+    inset: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .ball:hover {
     transform: scale(1.08);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      0 2px 8px rgba(137, 180, 250, 0.2);
+    background:
+      radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 30%),
+      linear-gradient(145deg, rgb(49, 52, 66) 0%, rgb(31, 34, 46) 58%, rgb(20, 22, 31) 100%);
     animation: none;
   }
 
   .ball.drag-active {
     transform: scale(1.15);
     border-color: #89b4fa;
+    background:
+      radial-gradient(circle at 30% 28%, rgba(186, 214, 255, 0.24), rgba(255, 255, 255, 0) 30%),
+      linear-gradient(145deg, rgb(43, 55, 80) 0%, rgb(26, 34, 52) 58%, rgb(15, 20, 33) 100%);
     box-shadow:
-      0 0 0 2px rgba(137, 180, 250, 0.4),
-      0 8px 32px rgba(137, 180, 250, 0.3);
+      inset 0 0 0 1px rgba(137, 180, 250, 0.26),
+      inset 0 -10px 18px rgba(24, 38, 66, 0.45);
     animation: none;
   }
 
@@ -246,14 +278,14 @@
     0%, 100% {
       transform: scale(1);
       box-shadow:
-        0 4px 24px rgba(0, 0, 0, 0.4),
-        0 0 0 0 rgba(137, 180, 250, 0);
+        inset 0 1px 1px rgba(255, 255, 255, 0.12),
+        inset 0 -10px 18px rgba(0, 0, 0, 0.35);
     }
     50% {
       transform: scale(1.04);
       box-shadow:
-        0 6px 28px rgba(0, 0, 0, 0.45),
-        0 0 0 4px rgba(137, 180, 250, 0.1);
+        inset 0 1px 1px rgba(255, 255, 255, 0.14),
+        inset 0 -12px 20px rgba(0, 0, 0, 0.38);
     }
   }
 </style>

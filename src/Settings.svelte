@@ -1,6 +1,7 @@
 <script>
+  import { getVersion } from "@tauri-apps/api/app";
   import { invoke } from "@tauri-apps/api/core";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import { FORMAT_OPTIONS } from "./formatUrl.js";
 
   export let config = { base_url: "", auth_token: "", upload_folder: "", auto_copy_format: "raw", show_floating: true };
@@ -14,6 +15,13 @@
   let showFloating = config.show_floating !== false;
   let saving = false;
   let saveStatus = "";
+  let appVersion = __APP_VERSION__;
+
+  onMount(async () => {
+    try {
+      appVersion = await getVersion();
+    } catch (_) {}
+  });
 
   async function handleSave() {
     saving = true;
@@ -127,7 +135,7 @@
       <h3 class="section-title">关于</h3>
       <div class="about">
         <p><strong>Satellite</strong> 🛰️</p>
-        <p class="version">v0.1.6</p>
+        <p class="version">{appVersion ? `v${appVersion}` : "v-"}</p>
         <p class="desc">轻量级 CloudFlare ImgBed 桌面客户端</p>
         <p class="desc">基于 Tauri + Svelte + Rust 构建</p>
       </div>
