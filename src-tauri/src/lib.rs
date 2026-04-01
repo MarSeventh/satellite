@@ -203,4 +203,3 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-/// Generate a simple 32×32 blue circle icon for the tray (RGBA).
