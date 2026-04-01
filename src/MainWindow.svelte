@@ -104,7 +104,7 @@
   <!-- Header -->
   <header class="header">
     <div class="header-left">
-      <span class="logo">🛰️</span>
+      <span class="logo">🌙</span>
       <span class="app-name">Satellite</span>
     </div>
     <div class="header-right">

@@ -1,4 +1,4 @@
-# 🛰️ Satellite
+# 🌙 Satellite
 
 轻量级 CloudFlare ImgBed 桌面客户端。支持 Windows / macOS。
 
@@ -49,7 +49,7 @@ npm run tauri build
 
 ## 使用
 
-1. 启动后会出现悬浮球（🛰️）
+1. 启动后会出现悬浮球（🌙）
 2. 拖放文件到悬浮球 → 自动上传 → 链接复制到剪贴板
 3. 点击悬浮球打开主窗口查看历史记录
 4. 点击「管理后台」跳转网页端管理界面

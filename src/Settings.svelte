@@ -134,7 +134,7 @@
     <div class="section">
       <h3 class="section-title">关于</h3>
       <div class="about">
-        <p><strong>Satellite</strong> 🛰️</p>
+        <p><strong>Satellite</strong> 🌙</p>
         <p class="version">{appVersion ? `v${appVersion}` : "v-"}</p>
         <p class="desc">轻量级 CloudFlare ImgBed 桌面客户端</p>
         <p class="desc">基于 Tauri + Svelte + Rust 构建</p>

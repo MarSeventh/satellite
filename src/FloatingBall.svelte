@@ -154,7 +154,7 @@
     {:else if isUploading}
       <span class="percent">{Math.round(uploadPercent)}%</span>
     {:else}
-      <span class="icon">🛰️</span>
+      <span class="icon">🌙</span>
     {/if}
     </div>
   </div>
