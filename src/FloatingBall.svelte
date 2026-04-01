@@ -118,13 +118,11 @@
 </script>
 
 <div class="floating-stage">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="floating-root"
     class:drag-over={isDragOver}
     on:mousedown={onMouseDown}
-    role="button"
-    tabindex="0"
-    on:keydown={(e) => e.key === "Enter" && handleClick()}
   >
     <!-- SVG progress ring -->
     <svg class="ring" width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
