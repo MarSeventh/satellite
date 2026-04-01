@@ -64,7 +64,7 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
         unsafe {
             let _ = DwmSetWindowAttribute(
                 hwnd.0 as _,
-                DWMWA_BORDER_COLOR,
+                DWMWA_BORDER_COLOR as u32,
                 &border_color as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
             );
@@ -105,7 +105,10 @@ pub fn run() {
                 .items(&[&show_item, &hide_item, &quit_item])
                 .build()?;
 
-            let tray_icon = create_tray_icon();
+            let tray_icon = app
+                .default_window_icon()
+                .cloned()
+                .expect("missing default app icon");
 
             TrayIconBuilder::new()
                 .icon(tray_icon)
@@ -201,8 +204,3 @@ pub fn run() {
 }
 
 /// Generate a simple 32×32 blue circle icon for the tray (RGBA).
-fn create_tray_icon() -> tauri::image::Image<'static> {
-    tauri::image::Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
-        .expect("failed to load tray icon")
-        .to_owned()
-}
