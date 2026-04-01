@@ -118,11 +118,8 @@
 </script>
 
 <div class="floating-stage">
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="floating-root"
-    class:drag-over={isDragOver}
-    on:mousedown={onMouseDown}
   >
     <!-- SVG progress ring -->
     <svg class="ring" width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
@@ -148,7 +145,8 @@
     </svg>
 
   <!-- Main ball -->
-  <div class="ball" class:uploading={isUploading} class:drag-active={isDragOver}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="ball" class:uploading={isUploading} class:drag-active={isDragOver} on:mousedown={onMouseDown}>
     {#if isDragOver}
       <span class="icon">⬆️</span>
     {:else if isUploading}
@@ -170,6 +168,7 @@
     background: transparent;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    pointer-events: none;
   }
 
   .floating-root {
@@ -179,9 +178,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
     background: transparent;
     outline: none;
+    pointer-events: none;
   }
 
   .floating-root:focus,
@@ -209,6 +208,8 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
+    cursor: pointer;
+    pointer-events: auto;
     background:
       radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 30%),
       linear-gradient(145deg, rgb(45, 47, 60) 0%, rgb(28, 30, 41) 58%, rgb(17, 19, 26) 100%);

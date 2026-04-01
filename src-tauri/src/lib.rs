@@ -41,6 +41,9 @@ fn hide_main_window(app: tauri::AppHandle) {
 #[tauri::command]
 fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
     if let Some(win) = app.get_webview_window("floating") {
+        #[cfg(target_os = "windows")]
+        let _ = win.set_focusable(false);
+
         if visible {
             let _ = win.show();
         } else {
@@ -140,6 +143,7 @@ pub fn run() {
 
             #[cfg(target_os = "windows")]
             if let Some(win) = app.get_webview_window("floating") {
+                let _ = win.set_focusable(false);
                 disable_floating_window_border(&win);
             }
 
@@ -198,31 +202,7 @@ pub fn run() {
 
 /// Generate a simple 32×32 blue circle icon for the tray (RGBA).
 fn create_tray_icon() -> tauri::image::Image<'static> {
-    let size: u32 = 32;
-    let mut rgba = Vec::with_capacity((size * size * 4) as usize);
-    let center = size as f32 / 2.0;
-    let radius = center - 1.0;
-
-    for y in 0..size {
-        for x in 0..size {
-            let dx = x as f32 - center;
-            let dy = y as f32 - center;
-            let dist = (dx * dx + dy * dy).sqrt();
-
-            if dist <= radius {
-                // Smooth edge (anti-alias 1px)
-                let alpha = if dist > radius - 1.0 {
-                    ((radius - dist).max(0.0) * 255.0) as u8
-                } else {
-                    255u8
-                };
-                // Blue accent color: #89b4fa
-                rgba.extend_from_slice(&[0x89, 0xB4, 0xFA, alpha]);
-            } else {
-                rgba.extend_from_slice(&[0, 0, 0, 0]);
-            }
-        }
-    }
-
-    tauri::image::Image::new_owned(rgba, size, size)
+    tauri::image::Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
+        .expect("failed to load tray icon")
+        .to_owned()
 }
