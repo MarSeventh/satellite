@@ -117,36 +117,37 @@
   $: strokeDashoffset = CIRCUMFERENCE * (1 - uploadPercent / 100);
 </script>
 
-<div
-  class="floating-root"
-  class:drag-over={isDragOver}
-  on:mousedown={onMouseDown}
-  role="button"
-  tabindex="0"
-  on:keydown={(e) => e.key === "Enter" && handleClick()}
->
-  <!-- SVG progress ring -->
-  <svg class="ring" width="72" height="72" viewBox="0 0 72 72">
-    <!-- Background circle -->
-    <circle
-      cx="36" cy="36" r={RADIUS}
-      class="ring-bg"
-      fill="none"
-      stroke-width="3"
-    />
-    <!-- Progress arc -->
-    {#if isUploading}
+<div class="floating-stage">
+  <div
+    class="floating-root"
+    class:drag-over={isDragOver}
+    on:mousedown={onMouseDown}
+    role="button"
+    tabindex="0"
+    on:keydown={(e) => e.key === "Enter" && handleClick()}
+  >
+    <!-- SVG progress ring -->
+    <svg class="ring" width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+      <!-- Background circle -->
       <circle
         cx="36" cy="36" r={RADIUS}
-        class="ring-progress"
+        class="ring-bg"
         fill="none"
         stroke-width="3"
-        stroke-dasharray={CIRCUMFERENCE}
-        stroke-dashoffset={strokeDashoffset}
-        transform="rotate(-90 36 36)"
       />
-    {/if}
-  </svg>
+      <!-- Progress arc -->
+      {#if isUploading}
+        <circle
+          cx="36" cy="36" r={RADIUS}
+          class="ring-progress"
+          fill="none"
+          stroke-width="3"
+          stroke-dasharray={CIRCUMFERENCE}
+          stroke-dashoffset={strokeDashoffset}
+          transform="rotate(-90 36 36)"
+        />
+      {/if}
+    </svg>
 
   <!-- Main ball -->
   <div class="ball" class:uploading={isUploading} class:drag-active={isDragOver}>
@@ -157,23 +158,32 @@
     {:else}
       <span class="icon">🛰️</span>
     {/if}
+    </div>
   </div>
 </div>
 
 <style>
-  .floating-root {
+  .floating-stage {
     position: fixed;
     inset: 0;
-    width: 100vw;
-    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .floating-root {
+    position: relative;
+    width: 72px;
+    height: 72px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     background: transparent;
     outline: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
   }
 
   .floating-root:focus,
@@ -183,8 +193,8 @@
 
   .ring {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
+    pointer-events: none;
   }
 
   .ring-bg {
