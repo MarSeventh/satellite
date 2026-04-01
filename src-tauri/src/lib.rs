@@ -49,6 +49,26 @@ fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn disable_floating_window_border(win: &tauri::WebviewWindow) {
+    use std::ffi::c_void;
+    use windows_sys::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
+    };
+
+    if let Ok(hwnd) = win.hwnd() {
+        let border_color: u32 = DWMWA_COLOR_NONE;
+        unsafe {
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as _,
+                DWMWA_BORDER_COLOR,
+                &border_color as *const _ as *const c_void,
+                std::mem::size_of::<u32>() as u32,
+            );
+        }
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -116,6 +136,11 @@ pub fn run() {
                         let _ = main_win_clone.hide();
                     }
                 });
+            }
+
+            #[cfg(target_os = "windows")]
+            if let Some(win) = app.get_webview_window("floating") {
+                disable_floating_window_border(&win);
             }
 
             // Force transparent background on macOS floating window

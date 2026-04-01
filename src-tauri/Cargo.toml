@@ -1,6 +1,6 @@
 [package]
 name = "satellite"
-version = "0.1.26"
+version = "0.1.27"
 edition = "2021"
 
 [lib]
@@ -26,6 +26,9 @@ dirs = "5"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Graphics_Dwm"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

@@ -3609,7 +3609,7 @@ dependencies = [
 
 [[package]]
 name = "satellite"
-version = "0.1.5"
+version = "0.1.27"
 dependencies = [
  "dirs 5.0.1",
  "objc",
@@ -3624,6 +3624,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-shell",
  "tokio",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

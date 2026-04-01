@@ -1,6 +1,6 @@
 {
   "productName": "Satellite",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "identifier": "com.satellite.imgbed",
   "build": {
     "frontendDist": "../dist",
