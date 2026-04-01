@@ -1,7 +1,7 @@
 {
   "name": "satellite",
   "private": true,
-  "version": "0.1.30",
+  "version": "0.1.31",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",

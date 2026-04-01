@@ -110,6 +110,15 @@ pub fn run() {
                 .cloned()
                 .expect("missing default app icon");
 
+            if let Some(icon) = app.default_window_icon().cloned() {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_icon(icon.clone());
+                }
+                if let Some(win) = app.get_webview_window("floating") {
+                    let _ = win.set_icon(icon);
+                }
+            }
+
             TrayIconBuilder::new()
                 .icon(tray_icon)
                 .menu(&tray_menu)
