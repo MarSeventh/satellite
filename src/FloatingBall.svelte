@@ -162,10 +162,9 @@
     background:
       radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%),
       linear-gradient(145deg, rgb(45, 47, 60) 0%, rgb(28, 30, 41) 58%, rgb(17, 19, 26) 100%);
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.35),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease, filter 0.2s ease;
     animation: breathe 3s ease-in-out infinite;
     will-change: transform;
   }
@@ -186,9 +185,8 @@
 
   .card.drag-active {
     transform: scale(1.08);
-    box-shadow:
-      0 10px 28px rgba(137, 180, 250, 0.3),
-      inset 0 0 0 2px rgba(137, 180, 250, 0.5);
+    filter: drop-shadow(0 10px 28px rgba(137, 180, 250, 0.3));
+    box-shadow: inset 0 0 0 2px rgba(137, 180, 250, 0.5);
     animation: none;
   }
 
@@ -225,14 +223,12 @@
 
   @keyframes breathe {
     0%, 100% {
-      box-shadow:
-        0 8px 24px rgba(0, 0, 0, 0.35),
-        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
     }
     50% {
-      box-shadow:
-        0 10px 28px rgba(0, 0, 0, 0.4),
-        inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.4));
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
     }
   }
 </style>
