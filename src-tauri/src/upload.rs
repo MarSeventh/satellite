@@ -184,7 +184,12 @@ async fn do_upload(
     let total = file_paths.len();
     let mut results: Vec<UploadResult> = Vec::with_capacity(total);
     let upload_url = format!("{}/upload", cfg.base_url.trim_end_matches('/'));
-    let detected_channel = detect_upload_channel(&client, &cfg).await;
+    let configured_channel = configured_upload_channel(&cfg);
+    let detected_channel = if configured_channel.is_some() {
+        None
+    } else {
+        detect_upload_channel(&client, &cfg).await
+    };
 
     for (idx, path_str) in file_paths.iter().enumerate() {
         let file_path = PathBuf::from(path_str);
@@ -203,7 +208,8 @@ async fn do_upload(
 
         let mime = mime_from_ext(&filename);
 
-        let is_hf_channel = detected_channel
+        let selected_channel = configured_channel.as_ref().or(detected_channel.as_ref());
+        let is_hf_channel = selected_channel
             .as_ref()
             .map(|c| c.upload_channel.as_str() == "huggingface")
             .unwrap_or(false);
@@ -216,7 +222,7 @@ async fn do_upload(
                 &filename,
                 &mime,
                 &file_bytes,
-                detected_channel.as_ref(),
+                selected_channel,
                 idx,
                 total,
             )
@@ -231,7 +237,7 @@ async fn do_upload(
                 &filename,
                 &mime,
                 &file_bytes,
-                detected_channel.as_ref(),
+                selected_channel,
                 idx,
                 total,
             )
@@ -258,7 +264,7 @@ async fn do_upload(
             }
             req = req.query(&build_upload_query(
                 &cfg,
-                detected_channel.as_ref(),
+                selected_channel,
                 None,
                 false,
                 false,
@@ -427,6 +433,29 @@ async fn chunked_upload(
 
     let body = resp.text().await.map_err(|e| e.to_string())?;
     parse_response_url(&cfg.base_url, &body)
+}
+
+fn configured_upload_channel(cfg: &config::AppConfig) -> Option<UploadChannelSelection> {
+    let normalized = match cfg.upload_channel.trim().to_ascii_lowercase().as_str() {
+        "" => return None,
+        "hf" | "huggingface" => "huggingface",
+        "telegram" => "telegram",
+        "cfr2" => "cfr2",
+        "s3" => "s3",
+        "discord" => "discord",
+        "external" => "external",
+        _ => return None,
+    };
+
+    let channel_name = cfg.channel_name.trim();
+    Some(UploadChannelSelection {
+        upload_channel: normalized.to_string(),
+        channel_name: if channel_name.is_empty() {
+            None
+        } else {
+            Some(channel_name.to_string())
+        },
+    })
 }
 
 async fn detect_upload_channel(
