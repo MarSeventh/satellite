@@ -59,19 +59,39 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
         DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
         DWMWA_NCRENDERING_POLICY,
     };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SetWindowLongPtrW, SetWindowPos, GWL_STYLE, SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE,
+        SWP_NOZORDER, WS_POPUP, WS_VISIBLE,
+    };
 
     if let Ok(hwnd) = win.hwnd() {
+        let h = hwnd.0 as _;
         let border_color: u32 = DWMWA_COLOR_NONE;
         let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
         unsafe {
+            // Force pure WS_POPUP style so Windows stops drawing any title bar /
+            // close button / system menu behind the transparent squircle.
+            // tauri's `decorations: false` leaves some caption bits on Win11 in
+            // this configuration; re-apply the intended style explicitly.
+            SetWindowLongPtrW(h, GWL_STYLE, (WS_POPUP | WS_VISIBLE) as isize);
+            SetWindowPos(
+                h,
+                std::ptr::null_mut(),
+                0,
+                0,
+                0,
+                0,
+                SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER,
+            );
+
             let _ = DwmSetWindowAttribute(
-                hwnd.0 as _,
+                h,
                 DWMWA_BORDER_COLOR as u32,
                 &border_color as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
             );
             let _ = DwmSetWindowAttribute(
-                hwnd.0 as _,
+                h,
                 DWMWA_NCRENDERING_POLICY as u32,
                 &no_nc_rendering as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
