@@ -11,6 +11,11 @@
   let unlistenDragOver = null;
   let unlistenDragLeave = null;
 
+  // On Windows the floating ball is square (no transparency needed).
+  // On macOS it keeps the rounded squircle shape.
+  const isMac = navigator.userAgent.includes("Mac");
+  let isSquare = !isMac;
+
   const appWindow = getCurrentWindow();
 
   onMount(async () => {
@@ -115,6 +120,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="card"
+    class:square={isSquare}
     class:uploading={isUploading}
     class:drag-active={isDragOver}
     on:mousedown={onMouseDown}
@@ -142,8 +148,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Background is set to the colour-key by App.svelte on Windows,
-       so "transparent" here just means "inherit from body". */
     background: transparent;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -178,6 +182,15 @@
     border-radius: 26px;
     pointer-events: none;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  /* Windows: square card fills the entire window — no transparency needed */
+  .card.square {
+    border-radius: 0;
+    filter: none;
+  }
+  .card.square::after {
+    border-radius: 0;
   }
 
   .card:hover {

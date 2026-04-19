@@ -12,11 +12,11 @@
     // so we must set this via JS to avoid the floating window's transparent background
     // overriding the main window's opaque background.
     if (isFloating) {
-      // On Windows we use a WS_EX_LAYERED colour-key (#FF00FF) for
-      // reliable transparency.  On macOS the native NSWindow clear-colour
-      // approach works fine, so we keep "transparent" there.
+      // On macOS we use native NSWindow transparency for rounded corners.
+      // On Windows the floating ball is square and fills the entire window,
+      // so we just match the card's dark background — no transparency needed.
       const isMac = navigator.userAgent.includes("Mac");
-      const bg = isMac ? "transparent" : "#FF00FF";
+      const bg = isMac ? "transparent" : "#1c1e29";
       document.documentElement.style.background = bg;
       document.documentElement.style.colorScheme = "normal";
       document.body.style.background = bg;
