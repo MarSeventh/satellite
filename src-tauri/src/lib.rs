@@ -57,12 +57,13 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
     use std::ffi::c_void;
     use windows_sys::Win32::Graphics::Dwm::{
         DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
-        DWMWA_NCRENDERING_POLICY,
+        DWMWA_NCRENDERING_POLICY, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
     };
 
     if let Ok(hwnd) = win.hwnd() {
         let border_color: u32 = DWMWA_COLOR_NONE;
         let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
+        let corner_pref: u32 = DWMWCP_ROUND as u32;
         unsafe {
             let _ = DwmSetWindowAttribute(
                 hwnd.0 as _,
@@ -74,6 +75,14 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
                 hwnd.0 as _,
                 DWMWA_NCRENDERING_POLICY as u32,
                 &no_nc_rendering as *const _ as *const c_void,
+                std::mem::size_of::<u32>() as u32,
+            );
+            // Windows 11+: round the window corners at the OS level.
+            // Ignored (harmlessly) on Windows 10.
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as _,
+                DWMWA_WINDOW_CORNER_PREFERENCE as u32,
+                &corner_pref as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
             );
         }
@@ -178,6 +187,21 @@ pub fn run() {
                             let _: () = msg_send![ns_win, setBackgroundColor: clear];
                             let _: () = msg_send![ns_win, setOpaque: objc::runtime::NO];
                             let _: () = msg_send![ns_win, setHasShadow: objc::runtime::NO];
+
+                            // Round the window at the OS level via contentView's layer,
+                            // so the corners outside the radius don't render at all.
+                            let content_view: *mut objc::runtime::Object =
+                                msg_send![ns_win, contentView];
+                            if !content_view.is_null() {
+                                let _: () = msg_send![content_view, setWantsLayer: objc::runtime::YES];
+                                let layer: *mut objc::runtime::Object =
+                                    msg_send![content_view, layer];
+                                if !layer.is_null() {
+                                    let radius: f64 = 26.0;
+                                    let _: () = msg_send![layer, setCornerRadius: radius];
+                                    let _: () = msg_send![layer, setMasksToBounds: objc::runtime::YES];
+                                }
+                            }
                         }
                     }
                     let _ = win.with_webview(|webview| {
