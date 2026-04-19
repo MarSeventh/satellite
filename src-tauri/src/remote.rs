@@ -39,10 +39,8 @@ pub async fn list_remote_files(
     let client = reqwest::Client::new();
     let url = format!("{}/api/manage/list", cfg.base_url.trim_end_matches('/'));
 
-    let mut query_params: Vec<(&str, String)> = vec![
-        ("start", start.to_string()),
-        ("count", count.to_string()),
-    ];
+    let mut query_params: Vec<(&str, String)> =
+        vec![("start", start.to_string()), ("count", count.to_string())];
     if !dir.is_empty() {
         query_params.push(("dir", dir));
     }
@@ -64,7 +62,8 @@ pub async fn list_remote_files(
         return Err(format!("列表请求失败 ({}): {}", status, body));
     }
 
-    let api_resp = resp.json::<ApiListResponse>()
+    let api_resp = resp
+        .json::<ApiListResponse>()
         .await
         .map_err(|e| format!("解析响应失败: {}", e))?;
 
@@ -120,7 +119,10 @@ pub async fn download_remote_file(url: String, save_path: String) -> Result<(), 
         return Err(format!("下载失败 ({})", resp.status()));
     }
 
-    let bytes = resp.bytes().await.map_err(|e| format!("读取数据失败: {}", e))?;
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("读取数据失败: {}", e))?;
 
     tokio::fs::write(&save_path, &bytes)
         .await

@@ -578,7 +578,7 @@ async fn hf_direct_upload(
                 .and_then(|s| s.parse::<usize>().ok())
                 .ok_or_else(|| "HF chunk_size invalid".to_string())?;
             if chunk_size == 0 {
-                return Err("HF chunk_size cannot be zero".to_string());
+                return Err("HF chunk_size must be positive, got 0".to_string());
             }
 
             let total_parts = (file_bytes.len() + chunk_size - 1) / chunk_size;
