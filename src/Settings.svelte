@@ -4,13 +4,15 @@
   import { createEventDispatcher, onMount } from "svelte";
   import { FORMAT_OPTIONS } from "./formatUrl.js";
 
-  export let config = { base_url: "", auth_token: "", upload_folder: "", auto_copy_format: "raw", show_floating: true };
+  export let config = { base_url: "", auth_token: "", upload_folder: "", upload_channel: "", channel_name: "", auto_copy_format: "raw", show_floating: true };
 
   const dispatch = createEventDispatcher();
 
   let baseUrl = config.base_url || "";
   let authToken = config.auth_token || "";
   let uploadFolder = config.upload_folder || "";
+  let uploadChannel = config.upload_channel || "";
+  let channelName = config.channel_name || "";
   let autoCopyFormat = config.auto_copy_format || "raw";
   let showFloating = config.show_floating !== false;
   let saving = false;
@@ -31,6 +33,8 @@
         baseUrl,
         authToken,
         uploadFolder,
+        uploadChannel,
+        channelName,
         autoCopyFormat,
         showFloating,
       });
@@ -41,6 +45,8 @@
         base_url: baseUrl,
         auth_token: authToken,
         upload_folder: uploadFolder,
+        upload_channel: uploadChannel,
+        channel_name: channelName,
         auto_copy_format: autoCopyFormat,
         show_floating: showFloating,
       });
@@ -93,6 +99,31 @@
           class="input"
         />
         <span class="hint">上传文件时使用的服务端目录路径，留空为默认目录</span>
+      </div>
+
+      <div class="form-group">
+        <label for="upload-channel">默认上传渠道（可选）</label>
+        <select id="upload-channel" bind:value={uploadChannel} class="input">
+          <option value="">自动识别</option>
+          <option value="telegram">telegram</option>
+          <option value="cfr2">cfr2</option>
+          <option value="s3">s3</option>
+          <option value="discord">discord</option>
+          <option value="huggingface">huggingface</option>
+        </select>
+        <span class="hint">留空时自动识别；设置后会优先按该渠道上传</span>
+      </div>
+
+      <div class="form-group">
+        <label for="channel-name">渠道名称（可选）</label>
+        <input
+          id="channel-name"
+          type="text"
+          bind:value={channelName}
+          placeholder="例如: my-hf-channel"
+          class="input"
+        />
+        <span class="hint">多渠道场景下可指定 channelName</span>
       </div>
     </div>
 

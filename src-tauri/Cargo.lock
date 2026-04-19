@@ -3609,14 +3609,16 @@ dependencies = [
 
 [[package]]
 name = "satellite"
-version = "0.1.27"
+version = "0.1.31"
 dependencies = [
+ "base64 0.22.1",
  "dirs 5.0.1",
  "objc",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-clipboard-manager",

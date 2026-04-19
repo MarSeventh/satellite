@@ -13,7 +13,7 @@
   import { formatUrl } from "./formatUrl.js";
 
   let activeTab = "history"; // "history" | "settings" | "remote"
-  let config = { base_url: "", auth_token: "", upload_folder: "", auto_copy_format: "raw", show_floating: true };
+  let config = { base_url: "", auth_token: "", upload_folder: "", upload_channel: "", channel_name: "", auto_copy_format: "raw", show_floating: true };
   let isUploading = false;
   let uploadStatus = "";
   let dragOver = false;
