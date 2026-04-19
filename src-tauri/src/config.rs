@@ -12,6 +12,10 @@ pub struct AppConfig {
     pub channel_name: String,
     pub auto_copy_format: String,
     pub show_floating: bool,
+    /// "none" | "system" | "custom"
+    pub proxy_mode: String,
+    /// Custom HTTP proxy URL, e.g. http://127.0.0.1:7890
+    pub proxy_url: String,
 }
 
 impl Default for AppConfig {
@@ -24,6 +28,8 @@ impl Default for AppConfig {
             channel_name: String::new(),
             auto_copy_format: "raw".to_string(),
             show_floating: true,
+            proxy_mode: "none".to_string(),
+            proxy_url: String::new(),
         }
     }
 }
@@ -50,6 +56,30 @@ pub fn store_config(config: &AppConfig) -> Result<(), String> {
     fs::write(path, json).map_err(|e| format!("Failed to write config: {}", e))
 }
 
+/// Build a reqwest::Client respecting the proxy settings in config.
+pub fn build_http_client(config: &AppConfig) -> Result<reqwest::Client, String> {
+    let mut builder = reqwest::Client::builder();
+
+    match config.proxy_mode.as_str() {
+        "system" => {
+            // reqwest default behavior uses system proxy, so just don't call no_proxy
+        }
+        "custom" => {
+            if !config.proxy_url.is_empty() {
+                let proxy = reqwest::Proxy::all(&config.proxy_url)
+                    .map_err(|e| format!("Invalid proxy URL: {}", e))?;
+                builder = builder.proxy(proxy);
+            }
+        }
+        _ => {
+            // "none" — disable all proxies
+            builder = builder.no_proxy();
+        }
+    }
+
+    builder.build().map_err(|e| format!("Failed to build HTTP client: {}", e))
+}
+
 #[tauri::command]
 pub fn get_config() -> AppConfig {
     load_config()
@@ -64,6 +94,8 @@ pub fn save_config(
     channel_name: String,
     auto_copy_format: String,
     show_floating: bool,
+    proxy_mode: String,
+    proxy_url: String,
 ) -> Result<(), String> {
     let config = AppConfig {
         base_url,
@@ -73,6 +105,8 @@ pub fn save_config(
         channel_name,
         auto_copy_format,
         show_floating,
+        proxy_mode,
+        proxy_url,
     };
     store_config(&config)
 }

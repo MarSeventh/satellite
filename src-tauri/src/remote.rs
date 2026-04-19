@@ -36,7 +36,7 @@ pub async fn list_remote_files(
         return Err("需要 Auth Token 才能访问远程文件列表".into());
     }
 
-    let client = reqwest::Client::new();
+    let client = config::build_http_client(&cfg)?;
     let url = format!("{}/api/manage/list", cfg.base_url.trim_end_matches('/'));
 
     let mut query_params: Vec<(&str, String)> = vec![
@@ -83,7 +83,7 @@ pub async fn delete_remote_file(path: String) -> Result<bool, String> {
         return Err("需要配置 API Endpoint 和 Auth Token".into());
     }
 
-    let client = reqwest::Client::new();
+    let client = config::build_http_client(&cfg)?;
     let url = format!(
         "{}/api/manage/delete/{}",
         cfg.base_url.trim_end_matches('/'),
@@ -108,7 +108,8 @@ pub async fn delete_remote_file(path: String) -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn download_remote_file(url: String, save_path: String) -> Result<(), String> {
-    let client = reqwest::Client::new();
+    let cfg = config::load_config();
+    let client = config::build_http_client(&cfg)?;
 
     let resp = client
         .get(&url)

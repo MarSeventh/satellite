@@ -62,7 +62,7 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
 
     if let Ok(hwnd) = win.hwnd() {
         let border_color: u32 = DWMWA_COLOR_NONE;
-        let no_nc_rendering: u32 = DWMNCRP_DISABLED;
+        let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
         unsafe {
             let _ = DwmSetWindowAttribute(
                 hwnd.0 as _,

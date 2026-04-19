@@ -4,7 +4,7 @@
   import { createEventDispatcher, onMount } from "svelte";
   import { FORMAT_OPTIONS } from "./formatUrl.js";
 
-  export let config = { base_url: "", auth_token: "", upload_folder: "", upload_channel: "", channel_name: "", auto_copy_format: "raw", show_floating: true };
+  export let config = { base_url: "", auth_token: "", upload_folder: "", upload_channel: "", channel_name: "", auto_copy_format: "raw", show_floating: true, proxy_mode: "none", proxy_url: "" };
 
   const dispatch = createEventDispatcher();
 
@@ -15,6 +15,8 @@
   let channelName = config.channel_name || "";
   let autoCopyFormat = config.auto_copy_format || "raw";
   let showFloating = config.show_floating !== false;
+  let proxyMode = config.proxy_mode || "none";
+  let proxyUrl = config.proxy_url || "";
   let saving = false;
   let saveStatus = "";
   let appVersion = __APP_VERSION__;
@@ -37,6 +39,8 @@
         channelName,
         autoCopyFormat,
         showFloating,
+        proxyMode,
+        proxyUrl,
       });
       // Toggle floating ball visibility
       await invoke("set_floating_visible", { visible: showFloating });
@@ -49,6 +53,8 @@
         channel_name: channelName,
         auto_copy_format: autoCopyFormat,
         show_floating: showFloating,
+        proxy_mode: proxyMode,
+        proxy_url: proxyUrl,
       });
       setTimeout(() => { saveStatus = ""; }, 2000);
     } catch (e) {
@@ -147,6 +153,35 @@
         </label>
         <span class="hint">关闭后悬浮球将隐藏，可通过系统托盘操作</span>
       </div>
+    </div>
+
+    <div class="section">
+      <h3 class="section-title">网络代理</h3>
+      <p class="section-desc">配置上传和 API 请求使用的网络代理</p>
+
+      <div class="form-group">
+        <label for="proxy-mode">代理模式</label>
+        <select id="proxy-mode" bind:value={proxyMode} class="input">
+          <option value="none">不使用代理</option>
+          <option value="system">系统代理</option>
+          <option value="custom">自定义代理</option>
+        </select>
+        <span class="hint">选择"系统代理"将自动使用操作系统的代理设置</span>
+      </div>
+
+      {#if proxyMode === "custom"}
+        <div class="form-group">
+          <label for="proxy-url">代理地址</label>
+          <input
+            id="proxy-url"
+            type="text"
+            bind:value={proxyUrl}
+            placeholder="http://127.0.0.1:7890"
+            class="input"
+          />
+          <span class="hint">HTTP/HTTPS 代理地址，例如 http://127.0.0.1:7890 或 socks5://127.0.0.1:1080</span>
+        </div>
+      {/if}
     </div>
 
     <div class="form-actions">

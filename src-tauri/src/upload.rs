@@ -180,7 +180,7 @@ async fn do_upload(
     file_paths: Vec<String>,
     cfg: config::AppConfig,
 ) -> Result<Vec<UploadResult>, String> {
-    let client = reqwest::Client::new();
+    let client = config::build_http_client(&cfg)?;
     let total = file_paths.len();
     let mut results: Vec<UploadResult> = Vec::with_capacity(total);
     let upload_url = format!("{}/upload", cfg.base_url.trim_end_matches('/'));
