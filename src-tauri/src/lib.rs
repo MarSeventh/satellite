@@ -146,6 +146,37 @@ pub fn run() {
                 // We'll handle this by emitting a config event.
             }
 
+            // ----- Create floating window dynamically -----------------------
+            // On macOS we need `transparent(true)` so the NSWindow alpha
+            // compositing works.  On Windows we must NOT set transparent
+            // because it enables WebView2's own alpha compositing which
+            // conflicts with the WS_EX_LAYERED colour-key approach.
+            {
+                let use_transparent = cfg!(target_os = "macos");
+
+                let floating = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "floating",
+                    tauri::WebviewUrl::App("/".into()),
+                )
+                .title("")
+                .inner_size(84.0, 84.0)
+                .position(48.0, 188.0)
+                .visible(false)
+                .decorations(false)
+                .always_on_top(true)
+                .transparent(use_transparent)
+                .shadow(false)
+                .resizable(false)
+                .skip_taskbar(true)
+                .build()?;
+
+                // Set the app icon on the floating window
+                if let Some(icon) = app.default_window_icon().cloned() {
+                    let _ = floating.set_icon(icon);
+                }
+            }
+
             // ----- System tray -----
             let show_item = MenuItemBuilder::with_id("show", "显示主窗口").build(app)?;
             let hide_item = MenuItemBuilder::with_id("hide", "隐藏主窗口").build(app)?;
@@ -162,9 +193,6 @@ pub fn run() {
 
             if let Some(icon) = app.default_window_icon().cloned() {
                 if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.set_icon(icon.clone());
-                }
-                if let Some(win) = app.get_webview_window("floating") {
                     let _ = win.set_icon(icon);
                 }
             }
@@ -203,13 +231,13 @@ pub fn run() {
                 });
             }
 
+            // ----- Platform-specific floating window setup ------------------
             #[cfg(target_os = "windows")]
             if let Some(win) = app.get_webview_window("floating") {
                 let _ = win.set_focusable(false);
                 setup_floating_layered_window(&win);
             }
 
-            // Force transparent background on macOS floating window
             #[cfg(target_os = "macos")]
             #[allow(unexpected_cfgs)]
             {
@@ -225,8 +253,6 @@ pub fn run() {
                             let _: () = msg_send![ns_win, setOpaque: objc::runtime::NO];
                             let _: () = msg_send![ns_win, setHasShadow: objc::runtime::NO];
 
-                            // Round the window at the OS level via contentView's layer,
-                            // so the corners outside the radius don't render at all.
                             let content_view: *mut objc::runtime::Object =
                                 msg_send![ns_win, contentView];
                             if !content_view.is_null() {

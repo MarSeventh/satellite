@@ -1,6 +1,6 @@
 {
   "productName": "Satellite",
-  "version": "0.1.43",
+  "version": "0.1.44",
   "identifier": "com.satellite.imgbed",
   "build": {
     "frontendDist": "../dist",
@@ -23,23 +23,6 @@
         "center": true,
         "transparent": false,
         "decorations": true,
-        "dragDropEnabled": true
-      },
-      {
-        "label": "floating",
-        "title": "",
-        "url": "/",
-        "width": 84,
-        "height": 84,
-        "visible": false,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "transparent": true,
-        "shadow": false,
-        "resizable": false,
-        "skipTaskbar": true,
-        "x": 48,
-        "y": 188,
         "dragDropEnabled": true
       }
     ],
