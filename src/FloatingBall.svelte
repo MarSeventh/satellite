@@ -186,6 +186,8 @@
 
   /* Windows: square card fills the entire window — no transparency needed */
   .card.square {
+    width: 100%;
+    height: 100%;
     border-radius: 0;
     filter: none;
   }
