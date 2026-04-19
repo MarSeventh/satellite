@@ -74,10 +74,18 @@ struct UploadChannelSelection {
     channel_name: Option<String>,
 }
 
+fn null_to_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Default + serde::Deserialize<'de>,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 #[derive(Deserialize, Debug)]
 struct HfUploadAction {
     href: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_default")]
     header: HashMap<String, Value>,
 }
 
@@ -664,10 +672,12 @@ async fn hf_direct_upload(
                 "oid": get_resp_json.oid.clone().unwrap_or_else(|| sha256.clone()),
                 "parts": parts
             });
+            let complete_body = serde_json::to_vec(&complete_payload)
+                .map_err(|e| format!("HF serialize complete payload failed: {}", e))?;
             let complete_resp = client
                 .post(&upload_action.href)
                 .header("Content-Type", "application/vnd.git-lfs+json")
-                .json(&complete_payload)
+                .body(complete_body)
                 .send()
                 .await
                 .map_err(|e| format!("HF multipart complete failed: {}", e))?;
