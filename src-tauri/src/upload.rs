@@ -438,12 +438,11 @@ async fn chunked_upload(
 fn configured_upload_channel(cfg: &config::AppConfig) -> Option<UploadChannelSelection> {
     let normalized = match cfg.upload_channel.trim().to_ascii_lowercase().as_str() {
         "" => return None,
-        "hf" | "huggingface" => "huggingface",
+        "huggingface" => "huggingface",
         "telegram" => "telegram",
         "cfr2" => "cfr2",
         "s3" => "s3",
         "discord" => "discord",
-        "external" => "external",
         _ => return None,
     };
 
@@ -511,11 +510,8 @@ fn build_upload_query(
     if merge {
         query.push(("merge", "true".to_string()));
     }
-    if let Some(true) = include_upload_folder {
-        if !cfg.upload_folder.is_empty() {
-            query.push(("uploadFolder", cfg.upload_folder.clone()));
-        }
-    } else if include_upload_folder.is_none() && !cfg.upload_folder.is_empty() {
+    let should_include_upload_folder = include_upload_folder.unwrap_or(true);
+    if should_include_upload_folder && !cfg.upload_folder.is_empty() {
         query.push(("uploadFolder", cfg.upload_folder.clone()));
     }
 
@@ -607,7 +603,7 @@ async fn hf_direct_upload(
                 .and_then(|s| s.parse::<usize>().ok())
                 .ok_or_else(|| "HF chunk_size invalid".to_string())?;
             if chunk_size == 0 {
-                return Err("HF chunk_size must be positive, got 0".to_string());
+                return Err("HuggingFace chunk_size must be positive, got 0".to_string());
             }
 
             let total_parts = (file_bytes.len() + chunk_size - 1) / chunk_size;
