@@ -109,57 +109,34 @@
     }
     isDragging = false;
   }
-
-  // Circumference of the progress ring
-  const RADIUS = 28;
-  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-  $: strokeDashoffset = CIRCUMFERENCE * (1 - uploadPercent / 100);
 </script>
 
-<div class="floating-stage">
-  <div
-    class="floating-root"
-  >
-    <!-- SVG progress ring -->
-    <svg class="ring" width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
-      <!-- Background circle -->
-      <circle
-        cx="36" cy="36" r={RADIUS}
-        class="ring-bg"
-        fill="none"
-        stroke-width="3"
-      />
-      <!-- Progress arc -->
-      {#if isUploading}
-        <circle
-          cx="36" cy="36" r={RADIUS}
-          class="ring-progress"
-          fill="none"
-          stroke-width="3"
-          stroke-dasharray={CIRCUMFERENCE}
-          stroke-dashoffset={strokeDashoffset}
-          transform="rotate(-90 36 36)"
-        />
-      {/if}
-    </svg>
-
-  <!-- Main ball -->
+<div class="stage">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="ball" class:uploading={isUploading} class:drag-active={isDragOver} on:mousedown={onMouseDown}>
+  <div
+    class="card"
+    class:uploading={isUploading}
+    class:drag-active={isDragOver}
+    on:mousedown={onMouseDown}
+  >
+    {#if isUploading}
+      <div class="progress-track">
+        <div class="progress-fill" style="width: {uploadPercent}%"></div>
+      </div>
+    {/if}
+
     {#if isDragOver}
-      <span class="icon">⬆️</span>
+      <span class="icon">⬆</span>
     {:else if isUploading}
       <span class="percent">{Math.round(uploadPercent)}%</span>
     {:else}
       <span class="icon">🌙</span>
     {/if}
-    </div>
   </div>
 </div>
 
 <style>
-  .floating-stage {
+  .stage {
     position: fixed;
     inset: 0;
     display: flex;
@@ -171,113 +148,76 @@
     pointer-events: none;
   }
 
-  .floating-root {
-    position: relative;
-    width: 72px;
-    height: 72px;
+  .card {
+    width: 84px;
+    height: 84px;
+    border-radius: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    outline: none;
-    pointer-events: none;
-  }
-
-  .floating-root:focus,
-  .floating-root:focus-visible {
-    outline: none;
-  }
-
-  .ring {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-
-  .ring-bg {
-    stroke: rgba(255, 255, 255, 0.1);
-  }
-
-  .ring-progress {
-    stroke: #89b4fa;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.3s ease;
-  }
-
-  .ball {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
     cursor: pointer;
     pointer-events: auto;
     background:
-      radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 30%),
+      radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%),
       linear-gradient(145deg, rgb(45, 47, 60) 0%, rgb(28, 30, 41) 58%, rgb(17, 19, 26) 100%);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.12),
-      inset 0 -10px 18px rgba(0, 0, 0, 0.35);
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     animation: breathe 3s ease-in-out infinite;
-    position: relative;
-    z-index: 1;
-    overflow: hidden;
     will-change: transform;
   }
 
-  .ball::before,
-  .ball::after {
+  .card::after {
     content: "";
     position: absolute;
-    border-radius: 50%;
+    inset: 0;
+    border-radius: 26px;
     pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
-  .ball::before {
-    inset: 4px;
-    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 36%);
-    opacity: 0.9;
+  .card:hover {
+    transform: scale(1.05);
+    animation: none;
   }
 
-  .ball::after {
-    inset: 1px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .ball:hover {
+  .card.drag-active {
     transform: scale(1.08);
-    background:
-      radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 30%),
-      linear-gradient(145deg, rgb(49, 52, 66) 0%, rgb(31, 34, 46) 58%, rgb(20, 22, 31) 100%);
-    animation: none;
-  }
-
-  .ball.drag-active {
-    transform: scale(1.15);
-    border-color: #89b4fa;
-    background:
-      radial-gradient(circle at 30% 28%, rgba(186, 214, 255, 0.24), rgba(255, 255, 255, 0) 30%),
-      linear-gradient(145deg, rgb(43, 55, 80) 0%, rgb(26, 34, 52) 58%, rgb(15, 20, 33) 100%);
     box-shadow:
-      inset 0 0 0 1px rgba(137, 180, 250, 0.26),
-      inset 0 -10px 18px rgba(24, 38, 66, 0.45);
+      0 10px 28px rgba(137, 180, 250, 0.3),
+      inset 0 0 0 2px rgba(137, 180, 250, 0.5);
     animation: none;
   }
 
-  .ball.uploading {
+  .card.uploading {
     animation: none;
+  }
+
+  .progress-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: #89b4fa;
+    transition: width 0.3s ease;
   }
 
   .icon {
-    font-size: 22px;
+    font-size: 30px;
     line-height: 1;
   }
 
   .percent {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
     color: #89b4fa;
     font-family: monospace;
@@ -285,16 +225,14 @@
 
   @keyframes breathe {
     0%, 100% {
-      transform: scale(1);
       box-shadow:
-        inset 0 1px 1px rgba(255, 255, 255, 0.12),
-        inset 0 -10px 18px rgba(0, 0, 0, 0.35);
+        0 8px 24px rgba(0, 0, 0, 0.35),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1);
     }
     50% {
-      transform: scale(1.04);
       box-shadow:
-        inset 0 1px 1px rgba(255, 255, 255, 0.14),
-        inset 0 -12px 20px rgba(0, 0, 0, 0.38);
+        0 10px 28px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.12);
     }
   }
 </style>
