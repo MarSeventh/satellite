@@ -142,6 +142,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Background is set to the colour-key by App.svelte on Windows,
+       so "transparent" here just means "inherit from body". */
     background: transparent;
     user-select: none;
     -webkit-tap-highlight-color: transparent;

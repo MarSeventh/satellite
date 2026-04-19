@@ -52,66 +52,76 @@ fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
     }
 }
 
+/// Make the floating window truly transparent on Windows using the
+/// WS_EX_LAYERED + color-key approach.  This is the most reliable
+/// method across all Windows versions (Vista → 11) and does NOT
+/// depend on DWM composition or Tauri's `transparent` flag working
+/// correctly.
+///
+/// How it works:
+///   1. Strip WS_CAPTION / WS_THICKFRAME so there is no title-bar.
+///   2. Add WS_EX_LAYERED + WS_EX_TOOLWINDOW to the extended style.
+///   3. Call SetLayeredWindowAttributes with a colour key (#FF00FF).
+///      Every pixel that matches that exact colour becomes fully
+///      transparent (click-through).
+///   4. The front-end sets the page background to #FF00FF so the
+///      "empty" area disappears, while the card itself uses its own
+///      gradient and is therefore opaque.
 #[cfg(target_os = "windows")]
-fn disable_floating_window_border(win: &tauri::WebviewWindow) {
+fn setup_floating_layered_window(win: &tauri::WebviewWindow) {
     use std::ffi::c_void;
-    use windows_sys::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
-        DWMWA_NCRENDERING_POLICY,
-    };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, GWL_STYLE,
-        SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WS_CAPTION, WS_EX_APPWINDOW,
-        WS_EX_TOOLWINDOW, WS_POPUP, WS_SYSMENU, WS_THICKFRAME, WS_VISIBLE,
+        GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos,
+        GWL_EXSTYLE, GWL_STYLE,
+        SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+        WS_CAPTION, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_TOOLWINDOW,
+        WS_POPUP, WS_SYSMENU, WS_THICKFRAME, WS_VISIBLE,
     };
+
+    // SetLayeredWindowAttributes is not exposed by windows-sys 0.61,
+    // so we link it manually from user32.dll.
+    extern "system" {
+        fn SetLayeredWindowAttributes(
+            hwnd: *mut c_void,
+            cr_key: u32,
+            b_alpha: u8,
+            dw_flags: u32,
+        ) -> i32;
+    }
+    const LWA_COLORKEY: u32 = 0x00000001;
 
     if let Ok(hwnd) = win.hwnd() {
-        // windows-sys 0.61: HWND is *mut c_void
         let h = hwnd.0 as *mut c_void;
-        let border_color: u32 = DWMWA_COLOR_NONE;
-        let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
         unsafe {
-            // Strip every non-client style that could cause Windows to draw a
-            // title bar, caption buttons, or resize frame behind the content.
-            let cur_style = GetWindowLongPtrW(h, GWL_STYLE);
-            let new_style =
-                (cur_style & !(WS_CAPTION as isize) & !(WS_THICKFRAME as isize) & !(WS_SYSMENU as isize))
+            // --- window style: pure popup, no caption / frame ---------------
+            let style = GetWindowLongPtrW(h, GWL_STYLE);
+            let style = (style
+                & !(WS_CAPTION as isize)
+                & !(WS_THICKFRAME as isize)
+                & !(WS_SYSMENU as isize))
                 | WS_POPUP as isize
                 | WS_VISIBLE as isize;
-            SetWindowLongPtrW(h, GWL_STYLE, new_style);
+            SetWindowLongPtrW(h, GWL_STYLE, style);
 
-            // Also add WS_EX_TOOLWINDOW to prevent any taskbar ghost and remove
-            // WS_EX_APPWINDOW which can force a title bar on some Win11 builds.
-            let cur_ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
-            let new_ex = (cur_ex & !(WS_EX_APPWINDOW as isize)) | WS_EX_TOOLWINDOW as isize;
-            SetWindowLongPtrW(h, GWL_EXSTYLE, new_ex);
+            // --- extended style: layered + tool window ----------------------
+            let ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
+            let ex = (ex & !(WS_EX_APPWINDOW as isize))
+                | WS_EX_LAYERED as isize
+                | WS_EX_TOOLWINDOW as isize;
+            SetWindowLongPtrW(h, GWL_EXSTYLE, ex);
 
-            // Commit the style changes.
+            // Commit style changes.
             SetWindowPos(
                 h,
-                std::ptr::null_mut(), // HWND_TOP
-                0,
-                0,
-                0,
-                0,
+                std::ptr::null_mut(),
+                0, 0, 0, 0,
                 SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER,
             );
 
-            // Tell DWM to not render any non-client area at all.
-            let _ = DwmSetWindowAttribute(
-                h,
-                DWMWA_NCRENDERING_POLICY as u32,
-                &no_nc_rendering as *const _ as *const c_void,
-                std::mem::size_of::<u32>() as u32,
-            );
-
-            // Set border color to "none" so DWM doesn't draw a 1px border.
-            let _ = DwmSetWindowAttribute(
-                h,
-                DWMWA_BORDER_COLOR as u32,
-                &border_color as *const _ as *const c_void,
-                std::mem::size_of::<u32>() as u32,
-            );
+            // --- colour-key transparency ------------------------------------
+            // #FF00FF  →  COLORREF is 0x00BBGGRR  →  0x00FF00FF
+            let magenta: u32 = 0x00FF00FF;
+            SetLayeredWindowAttributes(h, magenta, 0, LWA_COLORKEY);
         }
     }
 }
@@ -196,7 +206,7 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             if let Some(win) = app.get_webview_window("floating") {
                 let _ = win.set_focusable(false);
-                disable_floating_window_border(&win);
+                setup_floating_layered_window(&win);
             }
 
             // Force transparent background on macOS floating window

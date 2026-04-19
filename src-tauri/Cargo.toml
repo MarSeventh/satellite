@@ -1,6 +1,6 @@
 [package]
 name = "satellite"
-version = "0.1.42"
+version = "0.1.43"
 edition = "2021"
 
 [lib]
@@ -30,7 +30,7 @@ base64 = "0.22.1"
 objc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Graphics_Dwm", "Win32_UI_WindowsAndMessaging", "Win32_Foundation"] }
+windows-sys = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

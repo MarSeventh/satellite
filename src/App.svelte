@@ -12,14 +12,18 @@
     // so we must set this via JS to avoid the floating window's transparent background
     // overriding the main window's opaque background.
     if (isFloating) {
-      document.documentElement.style.background = "transparent";
+      // On Windows we use a WS_EX_LAYERED colour-key (#FF00FF) for
+      // reliable transparency.  On macOS the native NSWindow clear-colour
+      // approach works fine, so we keep "transparent" there.
+      const isMac = navigator.userAgent.includes("Mac");
+      const bg = isMac ? "transparent" : "#FF00FF";
+      document.documentElement.style.background = bg;
       document.documentElement.style.colorScheme = "normal";
-      document.body.style.background = "transparent";
+      document.body.style.background = bg;
       const appDiv = document.getElementById("app");
-      if (appDiv) appDiv.style.background = "transparent";
-      // Override any Tailwind/reset backgrounds
-      document.documentElement.style.setProperty("background-color", "transparent", "important");
-      document.body.style.setProperty("background-color", "transparent", "important");
+      if (appDiv) appDiv.style.background = bg;
+      document.documentElement.style.setProperty("background-color", bg, "important");
+      document.body.style.setProperty("background-color", bg, "important");
     } else {
       document.documentElement.style.background = "#1a1b23";
       document.body.style.background = "#1a1b23";
