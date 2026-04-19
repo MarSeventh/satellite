@@ -1,6 +1,6 @@
 [package]
 name = "satellite"
-version = "0.1.40"
+version = "0.1.41"
 edition = "2021"
 
 [lib]

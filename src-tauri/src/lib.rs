@@ -56,27 +56,39 @@ fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
 fn disable_floating_window_border(win: &tauri::WebviewWindow) {
     use std::ffi::c_void;
     use windows_sys::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
-        DWMWA_NCRENDERING_POLICY,
+        DwmExtendFrameIntoClientArea, DwmSetWindowAttribute, DWMNCRP_DISABLED,
+        DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE, DWMWA_NCRENDERING_POLICY,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        SetWindowLongPtrW, SetWindowPos, GWL_STYLE, SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE,
-        SWP_NOZORDER, WS_POPUP, WS_VISIBLE,
+        GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, GWL_STYLE,
+        SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WS_CAPTION, WS_EX_APPWINDOW,
+        WS_EX_TOOLWINDOW, WS_POPUP, WS_SYSMENU, WS_THICKFRAME, WS_VISIBLE,
     };
 
     if let Ok(hwnd) = win.hwnd() {
-        let h = hwnd.0 as _;
+        let h = hwnd.0 as isize;
         let border_color: u32 = DWMWA_COLOR_NONE;
         let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
         unsafe {
-            // Force pure WS_POPUP style so Windows stops drawing any title bar /
-            // close button / system menu behind the transparent squircle.
-            // tauri's `decorations: false` leaves some caption bits on Win11 in
-            // this configuration; re-apply the intended style explicitly.
-            SetWindowLongPtrW(h, GWL_STYLE, (WS_POPUP | WS_VISIBLE) as isize);
+            // Strip every non-client style that could cause Windows to draw a
+            // title bar, caption buttons, or resize frame behind the content.
+            let cur_style = GetWindowLongPtrW(h, GWL_STYLE);
+            let new_style =
+                (cur_style & !(WS_CAPTION as isize) & !(WS_THICKFRAME as isize) & !(WS_SYSMENU as isize))
+                | WS_POPUP as isize
+                | WS_VISIBLE as isize;
+            SetWindowLongPtrW(h, GWL_STYLE, new_style);
+
+            // Also add WS_EX_TOOLWINDOW to prevent any taskbar ghost and remove
+            // WS_EX_APPWINDOW which can force a title bar on some Win11 builds.
+            let cur_ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
+            let new_ex = (cur_ex & !(WS_EX_APPWINDOW as isize)) | WS_EX_TOOLWINDOW as isize;
+            SetWindowLongPtrW(h, GWL_EXSTYLE, new_ex);
+
+            // Commit the style changes.
             SetWindowPos(
                 h,
-                std::ptr::null_mut(),
+                0, // HWND_TOP
                 0,
                 0,
                 0,
@@ -84,18 +96,31 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
                 SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER,
             );
 
-            let _ = DwmSetWindowAttribute(
-                h,
-                DWMWA_BORDER_COLOR as u32,
-                &border_color as *const _ as *const c_void,
-                std::mem::size_of::<u32>() as u32,
-            );
+            // Tell DWM to not render any non-client area at all.
             let _ = DwmSetWindowAttribute(
                 h,
                 DWMWA_NCRENDERING_POLICY as u32,
                 &no_nc_rendering as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
             );
+
+            // Set border color to "none" so DWM doesn't draw a 1px border.
+            let _ = DwmSetWindowAttribute(
+                h,
+                DWMWA_BORDER_COLOR as u32,
+                &border_color as *const _ as *const c_void,
+                std::mem::size_of::<u32>() as u32,
+            );
+
+            // Extend the DWM frame margins to -1 (sheet-of-glass) so the
+            // transparent background is honoured and no residual frame shows.
+            let margins = windows_sys::Win32::Graphics::Dwm::MARGINS {
+                cxLeftWidth: -1,
+                cxRightWidth: -1,
+                cyTopHeight: -1,
+                cyBottomHeight: -1,
+            };
+            let _ = DwmExtendFrameIntoClientArea(h, &margins);
         }
     }
 }
