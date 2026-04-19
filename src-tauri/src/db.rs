@@ -54,7 +54,11 @@ impl Database {
         Ok(conn.last_insert_rowid())
     }
 
-    pub fn query(&self, page: u32, page_size: u32) -> Result<Vec<HistoryItem>, rusqlite::Error> {
+    pub fn query(
+        &self,
+        page: u32,
+        page_size: u32,
+    ) -> Result<Vec<HistoryItem>, rusqlite::Error> {
         let conn = self.conn.lock().unwrap();
         let offset = (page.saturating_sub(1)) * page_size;
         let mut stmt = conn.prepare(
