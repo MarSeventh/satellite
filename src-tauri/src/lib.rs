@@ -56,8 +56,8 @@ fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
 fn disable_floating_window_border(win: &tauri::WebviewWindow) {
     use std::ffi::c_void;
     use windows_sys::Win32::Graphics::Dwm::{
-        DwmExtendFrameIntoClientArea, DwmSetWindowAttribute, DWMNCRP_DISABLED,
-        DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE, DWMWA_NCRENDERING_POLICY,
+        DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
+        DWMWA_NCRENDERING_POLICY,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, GWL_STYLE,
@@ -66,7 +66,8 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
     };
 
     if let Ok(hwnd) = win.hwnd() {
-        let h = hwnd.0 as isize;
+        // windows-sys 0.61: HWND is *mut c_void
+        let h = hwnd.0 as *mut c_void;
         let border_color: u32 = DWMWA_COLOR_NONE;
         let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
         unsafe {
@@ -88,7 +89,7 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
             // Commit the style changes.
             SetWindowPos(
                 h,
-                0, // HWND_TOP
+                std::ptr::null_mut(), // HWND_TOP
                 0,
                 0,
                 0,
@@ -111,16 +112,6 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
                 &border_color as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
             );
-
-            // Extend the DWM frame margins to -1 (sheet-of-glass) so the
-            // transparent background is honoured and no residual frame shows.
-            let margins = windows_sys::Win32::Graphics::Dwm::MARGINS {
-                cxLeftWidth: -1,
-                cxRightWidth: -1,
-                cyTopHeight: -1,
-                cyBottomHeight: -1,
-            };
-            let _ = DwmExtendFrameIntoClientArea(h, &margins);
         }
     }
 }
