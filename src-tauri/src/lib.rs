@@ -56,14 +56,16 @@ fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
 fn disable_floating_window_border(win: &tauri::WebviewWindow) {
     use std::ffi::c_void;
     use windows_sys::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
-        DWMWA_NCRENDERING_POLICY, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
+        DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMSBT_NONE, DWMWA_BORDER_COLOR,
+        DWMWA_COLOR_NONE, DWMWA_NCRENDERING_POLICY, DWMWA_SYSTEMBACKDROP_TYPE,
+        DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
     };
 
     if let Ok(hwnd) = win.hwnd() {
         let border_color: u32 = DWMWA_COLOR_NONE;
         let no_nc_rendering: u32 = DWMNCRP_DISABLED as u32;
         let corner_pref: u32 = DWMWCP_ROUND as u32;
+        let backdrop_none: i32 = DWMSBT_NONE;
         unsafe {
             let _ = DwmSetWindowAttribute(
                 hwnd.0 as _,
@@ -84,6 +86,15 @@ fn disable_floating_window_border(win: &tauri::WebviewWindow) {
                 DWMWA_WINDOW_CORNER_PREFERENCE as u32,
                 &corner_pref as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
+            );
+            // Windows 11+: disable any system backdrop (Mica/Acrylic/Auto) so the
+            // OS does not paint a light rounded rectangle behind the transparent
+            // floating window.
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as _,
+                DWMWA_SYSTEMBACKDROP_TYPE as u32,
+                &backdrop_none as *const _ as *const c_void,
+                std::mem::size_of::<i32>() as u32,
             );
         }
     }
