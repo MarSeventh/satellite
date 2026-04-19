@@ -56,16 +56,24 @@ fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
 fn disable_floating_window_border(win: &tauri::WebviewWindow) {
     use std::ffi::c_void;
     use windows_sys::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
+        DwmSetWindowAttribute, DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
+        DWMWA_NCRENDERING_POLICY,
     };
 
     if let Ok(hwnd) = win.hwnd() {
         let border_color: u32 = DWMWA_COLOR_NONE;
+        let no_nc_rendering: u32 = DWMNCRP_DISABLED;
         unsafe {
             let _ = DwmSetWindowAttribute(
                 hwnd.0 as _,
                 DWMWA_BORDER_COLOR as u32,
                 &border_color as *const _ as *const c_void,
+                std::mem::size_of::<u32>() as u32,
+            );
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as _,
+                DWMWA_NCRENDERING_POLICY as u32,
+                &no_nc_rendering as *const _ as *const c_void,
                 std::mem::size_of::<u32>() as u32,
             );
         }
@@ -80,8 +88,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Initialize database
-            let database =
-                db::Database::new().expect("Failed to initialize database");
+            let database = db::Database::new().expect("Failed to initialize database");
             app.manage(database);
 
             // Check config for floating window visibility
@@ -94,12 +101,9 @@ pub fn run() {
             }
 
             // ----- System tray -----
-            let show_item =
-                MenuItemBuilder::with_id("show", "显示主窗口").build(app)?;
-            let hide_item =
-                MenuItemBuilder::with_id("hide", "隐藏主窗口").build(app)?;
-            let quit_item =
-                MenuItemBuilder::with_id("quit", "退出").build(app)?;
+            let show_item = MenuItemBuilder::with_id("show", "显示主窗口").build(app)?;
+            let hide_item = MenuItemBuilder::with_id("hide", "隐藏主窗口").build(app)?;
+            let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
 
             let tray_menu = MenuBuilder::new(app)
                 .items(&[&show_item, &hide_item, &quit_item])
@@ -172,6 +176,8 @@ pub fn run() {
                             let clear: *mut objc::runtime::Object =
                                 msg_send![class!(NSColor), clearColor];
                             let _: () = msg_send![ns_win, setBackgroundColor: clear];
+                            let _: () = msg_send![ns_win, setOpaque: objc::runtime::NO];
+                            let _: () = msg_send![ns_win, setHasShadow: objc::runtime::NO];
                         }
                     }
                     let _ = win.with_webview(|webview| {
@@ -211,4 +217,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
