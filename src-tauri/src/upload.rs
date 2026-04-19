@@ -617,12 +617,34 @@ async fn hf_direct_upload(
             let total_parts = (file_bytes.len() + chunk_size - 1) / chunk_size;
             let mut parts = Vec::with_capacity(total_parts);
 
-            for part_idx in 0..total_parts {
-                let part_number = part_idx + 1;
-                let key = part_number.to_string();
+            // Collect all numeric keys (part URLs) and sort them numerically.
+            // The server may use zero-padded keys (e.g. "00001") instead of "1".
+            let mut part_keys: Vec<(usize, &String)> = upload_action
+                .header
+                .keys()
+                .filter_map(|k| k.parse::<usize>().ok().map(|n| (n, k)))
+                .collect();
+            part_keys.sort_by_key(|(n, _)| *n);
+            if part_keys.len() != total_parts {
+                return Err(format!(
+                    "HF part URL count mismatch: expected {} parts, got {} keys",
+                    total_parts,
+                    part_keys.len()
+                ));
+            }
+
+            for (part_idx, (part_number, key)) in part_keys.iter().enumerate() {
+                let part_number = *part_number;
+                if part_number != part_idx + 1 {
+                    return Err(format!(
+                        "HF part numbering not contiguous: expected {}, got {}",
+                        part_idx + 1,
+                        part_number
+                    ));
+                }
                 let part_url = upload_action
                     .header
-                    .get(&key)
+                    .get(*key)
                     .and_then(value_as_string)
                     .ok_or_else(|| {
                         format!("HF part upload url missing for part {}", part_number)
