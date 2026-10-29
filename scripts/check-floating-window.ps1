@@ -51,12 +51,14 @@ try {
     New-Item -ItemType Directory -Force -Path '.artifacts/floating' | Out-Null
     $frame = New-Object FloatingWindowCheck+Rect
     [void][FloatingWindowCheck]::GetWindowRect($script:ball, [ref]$frame)
-    $bitmap = New-Object System.Drawing.Bitmap(($frame.Right - $frame.Left + 32), ($frame.Bottom - $frame.Top + 32))
+    $bitmap = [System.Drawing.Bitmap]::new(($frame.Right - $frame.Left + 32), ($frame.Bottom - $frame.Top + 32))
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
         Start-Sleep -Milliseconds 1000
         $graphics.CopyFromScreen(($frame.Left - 16), ($frame.Top - 16), 0, 0, $bitmap.Size)
         $bitmap.Save((Join-Path (Get-Location) '.artifacts/floating/desktop-orb.png'))
+    } catch {
+        Write-Warning "Desktop capture unavailable: $_"
     } finally {
         $graphics.Dispose()
         $bitmap.Dispose()
@@ -94,6 +96,5 @@ try {
         }
         return $true
     }, [IntPtr]::Zero) | Out-Null
-    if ($env:CI) { node ./scripts/inspect-webviews.mjs }
     if (-not $appProcess.HasExited) { Stop-Process -Id $appProcess.Id -Force }
 }

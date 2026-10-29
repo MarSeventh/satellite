@@ -49,8 +49,6 @@ jobs:
       - name: Check the running Windows floating window
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: --remote-debugging-port=9223
         run: ./scripts/check-floating-window.ps1 -Executable ./src-tauri/target/${{ matrix.target }}/release/satellite.exe
       - name: Upload Windows runtime diagnostics
         if: always() && runner.os == 'Windows'
