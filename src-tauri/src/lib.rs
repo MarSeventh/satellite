@@ -81,6 +81,10 @@ pub fn run() {
                 )
                 .title("")
                 .inner_size(76.0, 76.0)
+                // Windows otherwise applies its caption-button minimum width
+                // (136px at 100% DPI), even to this undecorated window.
+                .min_inner_size(76.0, 76.0)
+                .max_inner_size(76.0, 76.0)
                 .position(48.0, 188.0)
                 .visible(false)
                 .decorations(false)

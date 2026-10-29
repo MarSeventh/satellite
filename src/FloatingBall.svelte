@@ -197,8 +197,9 @@
     position: relative;
     display: grid;
     place-items: center;
-    width: 100%;
-    height: 100%;
+    /* Match the native region even if the host temporarily has unequal sides. */
+    width: 100vmin;
+    height: 100vmin;
     padding: 0;
     border: 0;
     border-radius: 50%;
