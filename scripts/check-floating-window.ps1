@@ -67,5 +67,17 @@ try {
         [void][FloatingWindowCheck]::DeleteObject($region)
     }
 } finally {
+    [FloatingWindowCheck]::EnumWindows({
+        param($hwnd, $data)
+        $ownerId = [uint32]0
+        [void][FloatingWindowCheck]::GetWindowThreadProcessId($hwnd, [ref]$ownerId)
+        if ($ownerId -eq $appProcess.Id) {
+            $client = New-Object FloatingWindowCheck+Rect
+            [void][FloatingWindowCheck]::GetClientRect($hwnd, [ref]$client)
+            Write-Host "Window $hwnd visible=$([FloatingWindowCheck]::IsWindowVisible($hwnd)) client=$($client.Right)x$($client.Bottom) dpi=$([FloatingWindowCheck]::GetDpiForWindow($hwnd))"
+        }
+        return $true
+    }, [IntPtr]::Zero) | Out-Null
+    if ($env:CI) { node ./scripts/inspect-webviews.mjs }
     if (-not $appProcess.HasExited) { Stop-Process -Id $appProcess.Id -Force }
 }
