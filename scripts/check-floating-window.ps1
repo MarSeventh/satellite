@@ -46,6 +46,22 @@ try {
     }
     if ($script:ball -eq [IntPtr]::Zero) { throw 'The mounted frontend did not show the 76px floating window.' }
 
+    # Capture the real HWND and its surrounding corners on the Windows runner.
+    Add-Type -AssemblyName System.Drawing
+    New-Item -ItemType Directory -Force -Path '.artifacts/floating' | Out-Null
+    $frame = New-Object FloatingWindowCheck+Rect
+    [void][FloatingWindowCheck]::GetWindowRect($script:ball, [ref]$frame)
+    $bitmap = New-Object System.Drawing.Bitmap(($frame.Right - $frame.Left + 32), ($frame.Bottom - $frame.Top + 32))
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    try {
+        Start-Sleep -Milliseconds 1000
+        $graphics.CopyFromScreen(($frame.Left - 16), ($frame.Top - 16), 0, 0, $bitmap.Size)
+        $bitmap.Save((Join-Path (Get-Location) '.artifacts/floating/desktop-orb.png'))
+    } finally {
+        $graphics.Dispose()
+        $bitmap.Dispose()
+    }
+
     $region = [FloatingWindowCheck]::CreateRectRgn(0, 0, 0, 0)
     try {
         if ([FloatingWindowCheck]::GetWindowRgn($script:ball, $region) -le 0) { throw 'The actual floating HWND has no native region.' }
