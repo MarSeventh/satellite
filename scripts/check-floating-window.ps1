@@ -36,15 +36,24 @@ try {
                 $client = New-Object FloatingWindowCheck+Rect
                 [void][FloatingWindowCheck]::GetClientRect($hwnd, [ref]$client)
                 $expectedSize = [Math]::Round(76 * [FloatingWindowCheck]::GetDpiForWindow($hwnd) / 96)
-                if ([Math]::Abs($client.Right - $expectedSize) -le 1 -and [Math]::Abs($client.Bottom - $expectedSize) -le 1) {
-                    $script:ball = $hwnd
+                # Windows may keep a 136px-wide host. The native region, not that
+                # invisible bounding rectangle, defines the visible/clickable orb.
+                if ([Math]::Abs([Math]::Min($client.Right, $client.Bottom) - $expectedSize) -le 1) {
+                    $candidate = [FloatingWindowCheck]::CreateRectRgn(0, 0, 0, 0)
+                    try {
+                        if ([FloatingWindowCheck]::GetWindowRgn($hwnd, $candidate) -gt 0) {
+                            $script:ball = $hwnd
+                        }
+                    } finally {
+                        [void][FloatingWindowCheck]::DeleteObject($candidate)
+                    }
                 }
             }
             return $true
         }, [IntPtr]::Zero) | Out-Null
         if ($script:ball -eq [IntPtr]::Zero) { Start-Sleep -Milliseconds 500 }
     }
-    if ($script:ball -eq [IntPtr]::Zero) { throw 'The mounted frontend did not show the 76px floating window.' }
+    if ($script:ball -eq [IntPtr]::Zero) { throw 'The mounted frontend did not show a floating window with a native circular region.' }
 
     # Capture the real HWND and its surrounding corners on the Windows runner.
     Add-Type -AssemblyName System.Drawing
@@ -71,7 +80,10 @@ try {
         [void][FloatingWindowCheck]::GetRgnBox($region, [ref]$bounds)
         $width = $bounds.Right - $bounds.Left
         $height = $bounds.Bottom - $bounds.Top
-        if ([Math]::Abs($width - $height) -gt 1) { throw "Region is not circular: $width x $height" }
+        $expectedSize = [Math]::Round(76 * [FloatingWindowCheck]::GetDpiForWindow($script:ball) / 96)
+        if ([Math]::Abs($width - $expectedSize) -gt 1 -or [Math]::Abs($height - $expectedSize) -gt 1) {
+            throw "Visible region must be $expectedSize x $expectedSize, got $width x $height"
+        }
         $cx = [int](($bounds.Left + $bounds.Right) / 2)
         $cy = [int](($bounds.Top + $bounds.Bottom) / 2)
         if (-not [FloatingWindowCheck]::PtInRegion($region, $cx, $cy)) { throw 'Circle center is excluded.' }
