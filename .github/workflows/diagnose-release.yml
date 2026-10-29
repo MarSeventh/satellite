@@ -1,0 +1,115 @@
+name: Diagnose Release API permissions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Test draft creation and clean up only the diagnostic draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          from urllib.parse import quote
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          tag = 'v0.1.47'
+          api = os.environ['GITHUB_API_URL']
+          title = f"Release permission diagnostic {tag} / run {os.environ['GITHUB_RUN_ID']}"
+          safe_headers = {'x-github-request-id', 'x-accepted-github-permissions',
+                          'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset',
+                          'x-ratelimit-resource', 'retry-after', 'x-github-api-version-selected'}
+          evidence = {'repository': repo, 'tag': tag, 'requests': []}
+
+          def request(method, path, payload=None):
+              headers = {'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                         'Accept': 'application/vnd.github+json',
+                         'X-GitHub-Api-Version': '2022-11-28'}
+              data = json.dumps(payload).encode() if payload is not None else None
+              if data is not None:
+                  headers['Content-Type'] = 'application/json'
+              req = urllib.request.Request(api + path, data=data, headers=headers, method=method)
+              try:
+                  response = urllib.request.urlopen(req, timeout=30)
+              except urllib.error.HTTPError as error:
+                  response = error
+              with response:
+                  raw = response.read().decode()
+                  body = json.loads(raw) if raw else None
+                  record = {'method': method, 'path': path, 'status': response.status,
+                            'headers': {k.lower(): v for k, v in response.headers.items()
+                                        if k.lower() in safe_headers}}
+                  if response.status >= 400:
+                      record['body'] = body
+                  evidence['requests'].append(record)
+                  print(json.dumps(record), flush=True)
+                  return response.status, body
+
+          base = f'/repos/{repo}'
+          created_id = None
+          try:
+              status, ref = request('GET', base + '/git/ref/tags/' + quote(tag, safe=''))
+              assert status == 200, 'Existing version tag is required; do not create a new tag.'
+              target = ref['object']
+              for _ in range(5):
+                  if target['type'] == 'commit':
+                      break
+                  assert target['type'] == 'tag', target['type']
+                  status, annotated = request('GET', base + '/git/tags/' + target['sha'])
+                  assert status == 200, 'Cannot resolve annotated tag.'
+                  target = annotated['object']
+              assert target['type'] == 'commit', 'Tag did not resolve to a commit.'
+              evidence['target_commitish'] = target['sha']
+
+              page = 1
+              while True:
+                  status, releases = request('GET', base + f'/releases?per_page=100&page={page}')
+                  assert status == 200, 'Cannot verify whether a release already exists.'
+                  assert not any(r['tag_name'] == tag for r in releases), 'A release already exists; leave it untouched.'
+                  if len(releases) < 100:
+                      break
+                  page += 1
+
+              payload = {'tag_name': tag, 'target_commitish': target['sha'], 'name': title,
+                         'body': 'Temporary API permission diagnostic. No assets and no publication.',
+                         'draft': True, 'prerelease': False, 'generate_release_notes': False}
+              evidence['create_request'] = payload
+              status, release = request('POST', base + '/releases', payload)
+              evidence['create_status'] = status
+              if status == 201:
+                  created_id = release['id']
+                  evidence['created_release_id'] = created_id
+                  assert release['draft'] and release['tag_name'] == tag and release['name'] == title
+                  print('DRAFT_CREATION_SUCCEEDED; cleaning up this diagnostic draft only.', flush=True)
+              else:
+                  print(f'DRAFT_CREATION_DENIED: HTTP {status}; no release was created by this request.', flush=True)
+          finally:
+              try:
+                  if created_id is not None:
+                      status, current = request('GET', base + f'/releases/{created_id}')
+                      assert status == 200 and current['draft'] and current['name'] == title and current['tag_name'] == tag, 'Cleanup ownership check failed.'
+                      status, _ = request('DELETE', base + f'/releases/{created_id}')
+                      evidence['cleanup_status'] = status
+                      assert status == 204, 'Diagnostic draft cleanup failed; do not delete the tag.'
+              finally:
+                  with open('release-permission-diagnostic.json', 'w') as out:
+                      json.dump(evidence, out, indent=2)
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+                      out.write('Release API diagnostic only; no build or publication.\n\n')
+                      out.write(f"Draft creation HTTP status: {evidence.get('create_status', 'not attempted')}\n\n")
+                      out.write(f"Diagnostic draft cleanup HTTP status: {evidence.get('cleanup_status', 'not needed')}\n")
+          PY
+      - name: Save sanitized API evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-permission-diagnostic
+          path: release-permission-diagnostic.json
+          retention-days: 7
