@@ -177,8 +177,11 @@ pub async fn upload_files(
         return Ok(vec![]);
     }
 
-    let result = do_upload(app, db, file_paths, cfg).await;
+    let result = do_upload(app.clone(), db, file_paths, cfg).await;
     UPLOADING.store(false, Ordering::SeqCst);
+    if let Err(error) = &result {
+        let _ = app.emit("upload-failed", error);
+    }
     result
 }
 

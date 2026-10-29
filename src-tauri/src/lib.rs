@@ -2,6 +2,8 @@
 
 mod config;
 mod db;
+#[cfg(target_os = "windows")]
+mod floating;
 mod remote;
 mod upload;
 
@@ -39,17 +41,20 @@ fn hide_main_window(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn set_floating_visible(app: tauri::AppHandle, visible: bool) {
+fn set_floating_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("floating") {
         #[cfg(target_os = "windows")]
         let _ = win.set_focusable(false);
 
         if visible {
-            let _ = win.show();
+            #[cfg(target_os = "windows")]
+            floating::apply_circle(&win)?;
+            win.show().map_err(|error| error.to_string())?;
         } else {
-            let _ = win.hide();
+            win.hide().map_err(|error| error.to_string())?;
         }
     }
+    Ok(())
 }
 
 pub fn run() {
@@ -63,20 +68,9 @@ pub fn run() {
             let database = db::Database::new().expect("Failed to initialize database");
             app.manage(database);
 
-            // Check config for floating window visibility
-            let cfg = config::load_config();
-            if !cfg.show_floating {
-                // Floating window starts hidden (visible: false in config),
-                // FloatingBall.svelte calls appWindow.show() on mount,
-                // but we suppress that by keeping it hidden via config.
-                // We'll handle this by emitting a config event.
-            }
-
             // ----- Create floating window dynamically -----------------------
-            // On macOS we need `transparent(true)` for the NSWindow alpha
-            // compositing (rounded corners).  On Windows we use a square
-            // floating ball that fills the entire window, so no transparency
-            // is needed — this avoids all the Win11 title-bar / DWM issues.
+            // macOS uses alpha compositing. Windows uses an opaque WebView2 host
+            // with a circular native region, avoiding the previous DWM/color-key issues.
             {
                 let use_transparent = cfg!(target_os = "macos");
 
@@ -86,12 +80,18 @@ pub fn run() {
                     tauri::WebviewUrl::App("/".into()),
                 )
                 .title("")
-                .inner_size(84.0, 84.0)
+                .inner_size(76.0, 76.0)
                 .position(48.0, 188.0)
                 .visible(false)
                 .decorations(false)
                 .always_on_top(true)
                 .transparent(use_transparent)
+                .background_color(tauri::window::Color(
+                    218,
+                    230,
+                    243,
+                    if use_transparent { 0 } else { 255 },
+                ))
                 .shadow(false)
                 .resizable(false)
                 .skip_taskbar(true)
@@ -160,6 +160,19 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             if let Some(win) = app.get_webview_window("floating") {
                 let _ = win.set_focusable(false);
+                floating::apply_circle(&win).map_err(std::io::Error::other)?;
+                let floating_window = win.clone();
+                win.on_window_event(move |event| {
+                    if matches!(
+                        event,
+                        tauri::WindowEvent::Resized(_)
+                            | tauri::WindowEvent::ScaleFactorChanged { .. }
+                    ) {
+                        if let Err(error) = floating::apply_circle(&floating_window) {
+                            eprintln!("Failed to resize floating window region: {error}");
+                        }
+                    }
+                });
             }
 
             #[cfg(target_os = "macos")]
@@ -180,13 +193,15 @@ pub fn run() {
                             let content_view: *mut objc::runtime::Object =
                                 msg_send![ns_win, contentView];
                             if !content_view.is_null() {
-                                let _: () = msg_send![content_view, setWantsLayer: objc::runtime::YES];
+                                let _: () =
+                                    msg_send![content_view, setWantsLayer: objc::runtime::YES];
                                 let layer: *mut objc::runtime::Object =
                                     msg_send![content_view, layer];
                                 if !layer.is_null() {
-                                    let radius: f64 = 26.0;
+                                    let radius: f64 = 38.0;
                                     let _: () = msg_send![layer, setCornerRadius: radius];
-                                    let _: () = msg_send![layer, setMasksToBounds: objc::runtime::YES];
+                                    let _: () =
+                                        msg_send![layer, setMasksToBounds: objc::runtime::YES];
                                 }
                             }
                         }
